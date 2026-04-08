@@ -101,6 +101,12 @@ pixi run python bench_ipc.py
 
 ![JointState IPC latency](bench_ipc_joint.png)
 
+### Serialization latency bar charts
+
+![Serialize latency](bench_serdes_serialize.png)
+
+![Deserialize latency](bench_serdes_deserialize.png)
+
 ## Dependencies
 
 Managed by pixi. Key packages:

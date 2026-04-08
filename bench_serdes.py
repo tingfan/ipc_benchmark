@@ -17,6 +17,9 @@ H, W, C = 960, 1280, 3
 N_WARMUP = 5
 N_ITERS = 200
 
+# Collect results for plotting: {(msg_type, backend): {"ser": µs, "deser": µs}}
+RESULTS = {}
+
 
 def bench(name: str, fn, n_warmup=N_WARMUP, n_iters=N_ITERS):
     for _ in range(n_warmup):
@@ -28,6 +31,11 @@ def bench(name: str, fn, n_warmup=N_WARMUP, n_iters=N_ITERS):
     mean_us = elapsed / n_iters * 1e6
     print(f"  {name:.<50s} {mean_us:>9.1f} µs  ({n_iters} iters)")
     return mean_us
+
+
+def record(msg_type: str, backend: str, ser_us: float, deser_us: float):
+    """Store a serdes result for later plotting."""
+    RESULTS[(msg_type, backend)] = {"ser": ser_us, "deser": deser_us}
 
 
 def make_random_image():
@@ -63,8 +71,9 @@ def bench_cyclone(img_flat: np.ndarray, jpeg_bytes: bytes):
     def deser_raw():
         Image.deserialize(blob)
 
-    bench("serialize   (raw Image)", ser_raw)
-    bench("deserialize (raw Image)", deser_raw)
+    s = bench("serialize   (raw Image)", ser_raw)
+    d = bench("deserialize (raw Image)", deser_raw)
+    record("Image", "Cyclone", s, d)
 
     # CompressedImage — construct once
     cmsg = CompressedImage(format="jpeg", data=list(jpeg_bytes))
@@ -77,8 +86,9 @@ def bench_cyclone(img_flat: np.ndarray, jpeg_bytes: bytes):
     def deser_comp():
         CompressedImage.deserialize(cblob)
 
-    bench("serialize   (CompressedImage)", ser_comp)
-    bench("deserialize (CompressedImage)", deser_comp)
+    s = bench("serialize   (CompressedImage)", ser_comp)
+    d = bench("deserialize (CompressedImage)", deser_comp)
+    record("Compressed", "Cyclone", s, d)
 
     # roundtrip correctness
     rt = Image.deserialize(blob)
@@ -111,8 +121,9 @@ def bench_cydr(img_flat: np.ndarray, jpeg_bytes: bytes):
     def deser_raw():
         Image.deserialize(blob)
 
-    bench("serialize   (raw Image)", ser_raw)
-    bench("deserialize (raw Image)", deser_raw)
+    s = bench("serialize   (raw Image)", ser_raw)
+    d = bench("deserialize (raw Image)", deser_raw)
+    record("Image", "cydr", s, d)
 
     # CompressedImage — construct once
     jpeg_arr = np.frombuffer(jpeg_bytes, dtype=np.uint8)
@@ -126,8 +137,9 @@ def bench_cydr(img_flat: np.ndarray, jpeg_bytes: bytes):
     def deser_comp():
         CompressedImage.deserialize(cblob)
 
-    bench("serialize   (CompressedImage)", ser_comp)
-    bench("deserialize (CompressedImage)", deser_comp)
+    s = bench("serialize   (CompressedImage)", ser_comp)
+    d = bench("deserialize (CompressedImage)", deser_comp)
+    record("Compressed", "cydr", s, d)
 
     # roundtrip correctness
     rt = Image.deserialize(blob)
@@ -186,8 +198,9 @@ def bench_proto_image(img_flat: np.ndarray, jpeg_bytes: bytes):
     def deser():
         ProtoImage().parse(blob)
 
-    bench("serialize   (raw Image)", ser)
-    bench("deserialize (raw Image)", deser)
+    s = bench("serialize   (raw Image)", ser)
+    d = bench("deserialize (raw Image)", deser)
+    record("Image", "betterproto", s, d)
 
     rt = ProtoImage().parse(blob)
     assert rt.height == H and rt.width == W and rt.encoding == "bgr8"
@@ -204,8 +217,9 @@ def bench_proto_image(img_flat: np.ndarray, jpeg_bytes: bytes):
     def deser_comp():
         ProtoCompressedImage().parse(cblob)
 
-    bench("serialize   (CompressedImage)", ser_comp)
-    bench("deserialize (CompressedImage)", deser_comp)
+    s = bench("serialize   (CompressedImage)", ser_comp)
+    d = bench("deserialize (CompressedImage)", deser_comp)
+    record("Compressed", "betterproto", s, d)
 
     crt = ProtoCompressedImage().parse(cblob)
     assert crt.data == jpeg_bytes, "betterproto CompressedImage roundtrip MISMATCH"
@@ -225,8 +239,9 @@ def bench_proto_jointstate(names, pos, vel, eff):
     def deser():
         ProtoJointState().parse(blob)
 
-    bench("serialize   (JointState)", ser)
-    bench("deserialize (JointState)", deser)
+    s = bench("serialize   (JointState)", ser)
+    d = bench("deserialize (JointState)", deser)
+    record("JointState", "betterproto", s, d)
 
     rt = ProtoJointState().parse(blob)
     assert rt.name == names and rt.position == pos
@@ -251,8 +266,9 @@ def bench_google_proto_image(img_flat: np.ndarray, jpeg_bytes: bytes):
         m = Image()
         m.ParseFromString(blob)
 
-    bench("serialize   (raw Image)", ser)
-    bench("deserialize (raw Image)", deser)
+    s = bench("serialize   (raw Image)", ser)
+    d = bench("deserialize (raw Image)", deser)
+    record("Image", "protobuf(C)", s, d)
 
     rt = Image()
     rt.ParseFromString(blob)
@@ -271,8 +287,9 @@ def bench_google_proto_image(img_flat: np.ndarray, jpeg_bytes: bytes):
         m = CompressedImage()
         m.ParseFromString(cblob)
 
-    bench("serialize   (CompressedImage)", ser_comp)
-    bench("deserialize (CompressedImage)", deser_comp)
+    s = bench("serialize   (CompressedImage)", ser_comp)
+    d = bench("deserialize (CompressedImage)", deser_comp)
+    record("Compressed", "protobuf(C)", s, d)
 
     crt = CompressedImage()
     crt.ParseFromString(cblob)
@@ -296,8 +313,9 @@ def bench_google_proto_jointstate(names, pos, vel, eff):
         m = JointState()
         m.ParseFromString(blob)
 
-    bench("serialize   (JointState)", ser)
-    bench("deserialize (JointState)", deser)
+    s = bench("serialize   (JointState)", ser)
+    d = bench("deserialize (JointState)", deser)
+    record("JointState", "protobuf(C)", s, d)
 
     rt = JointState()
     rt.ParseFromString(blob)
@@ -328,8 +346,9 @@ def bench_lcm_image(img_flat: np.ndarray, jpeg_bytes: bytes):
     def deser():
         LcmImage.decode(blob)
 
-    bench("serialize   (raw Image)", ser)
-    bench("deserialize (raw Image)", deser)
+    s = bench("serialize   (raw Image)", ser)
+    d = bench("deserialize (raw Image)", deser)
+    record("Image", "LCM", s, d)
 
     rt = LcmImage.decode(blob)
     assert rt.height == H and rt.width == W and rt.encoding == "bgr8"
@@ -349,8 +368,9 @@ def bench_lcm_image(img_flat: np.ndarray, jpeg_bytes: bytes):
     def deser_comp():
         LcmCompressedImage.decode(cblob)
 
-    bench("serialize   (CompressedImage)", ser_comp)
-    bench("deserialize (CompressedImage)", deser_comp)
+    s = bench("serialize   (CompressedImage)", ser_comp)
+    d = bench("deserialize (CompressedImage)", deser_comp)
+    record("Compressed", "LCM", s, d)
 
     crt = LcmCompressedImage.decode(cblob)
     assert crt.data == jpeg_bytes, "LCM CompressedImage roundtrip MISMATCH"
@@ -377,8 +397,9 @@ def bench_lcm_jointstate(names, pos, vel, eff):
     def deser():
         LcmJointState.decode(blob)
 
-    bench("serialize   (JointState)", ser)
-    bench("deserialize (JointState)", deser)
+    s = bench("serialize   (JointState)", ser)
+    d = bench("deserialize (JointState)", deser)
+    record("JointState", "LCM", s, d)
 
     rt = LcmJointState.decode(blob)
     assert rt.name == names and list(rt.position) == pos
@@ -433,6 +454,9 @@ def main():
     eff = np.random.randn(N_JOINTS).tolist()
     print_payload_sizes(img_flat, jpeg_bytes, names, pos, vel, eff)
 
+    # ── Serdes plots ─────────────────────────────────────────────────────────
+    plot_serdes()
+
 
 def bench_jointstate():
     N_JOINTS = 16
@@ -458,8 +482,9 @@ def bench_jointstate():
     def deser():
         CycloneJS.deserialize(blob)
 
-    bench("serialize   (JointState)", ser)
-    bench("deserialize (JointState)", deser)
+    s = bench("serialize   (JointState)", ser)
+    d = bench("deserialize (JointState)", deser)
+    record("JointState", "Cyclone", s, d)
 
     rt = CycloneJS.deserialize(blob)
     assert rt.name == names and rt.position == pos
@@ -482,8 +507,9 @@ def bench_jointstate():
     def deser2():
         CydrJS.deserialize(blob2)
 
-    bench("serialize   (JointState)", ser2)
-    bench("deserialize (JointState)", deser2)
+    s = bench("serialize   (JointState)", ser2)
+    d = bench("deserialize (JointState)", deser2)
+    record("JointState", "cydr", s, d)
 
     rt2 = CydrJS.deserialize(blob2)
     assert np.array_equal(rt2.position, pos_np)
@@ -562,6 +588,53 @@ def print_payload_sizes(img_flat, jpeg_bytes, names, pos, vel, eff):
     gpb_comp = PbComp(format="jpeg", data=jpeg_bytes)
     print(f"  {'CompressedImage (JPEG)':<25s} {len(cyc_comp.serialize()):>10,} {len(bytes(bp_comp)):>10,} {len(gpb_comp.SerializeToString()):>10,} {len(lcm_comp.encode()):>10,}")
     print(f"  {'JointState (16 joints)':<25s} {len(cyc_js.serialize()):>10,} {len(bytes(bp_js)):>10,} {len(gpb_js.SerializeToString()):>10,} {len(lcm_js.encode()):>10,}")
+
+
+def plot_serdes():
+    import matplotlib.pyplot as plt
+
+    msg_types = ["Image", "Compressed", "JointState"]
+    msg_labels = ["Raw Image\n(3.7 MB)", "CompressedImage\n(JPEG ~1.1 MB)", "JointState\n(16 joints)"]
+    backends = ["Cyclone", "cydr", "betterproto", "protobuf(C)", "LCM"]
+    colors = ['#4C72B0', '#55A868', '#DD8452', '#C44E52', '#8172B3']
+
+    for op, op_key in [("Serialize", "ser"), ("Deserialize", "deser")]:
+        fig, axes = plt.subplots(1, 3, figsize=(14, 5))
+        fig.suptitle(f"{op} Latency (µs)", fontsize=14)
+
+        for ax, mt, ml in zip(axes, msg_types, msg_labels):
+            vals = []
+            labels = []
+            for b in backends:
+                key = (mt, b)
+                if key in RESULTS:
+                    vals.append(RESULTS[key][op_key])
+                    labels.append(b)
+
+            bars = ax.bar(range(len(vals)), vals, color=colors[:len(vals)])
+            ax.set_xticks(range(len(vals)))
+            ax.set_xticklabels(labels, rotation=30, ha='right', fontsize=8)
+            ax.set_title(ml, fontsize=10)
+            ax.set_ylabel('µs')
+            ax.grid(axis='y', alpha=0.3)
+
+            # annotate values
+            for bar, v in zip(bars, vals):
+                if v > 1000:
+                    label = f"{v/1000:.1f}ms"
+                elif v < 1:
+                    label = f"{v:.2f}"
+                else:
+                    label = f"{v:.1f}"
+                ax.annotate(label, xy=(bar.get_x() + bar.get_width()/2, bar.get_height()),
+                            xytext=(0, 3), textcoords='offset points',
+                            ha='center', fontsize=7)
+
+        fig.tight_layout()
+        fname = f"bench_serdes_{op.lower()}.png"
+        fig.savefig(fname, dpi=150)
+        print(f"  → saved {fname}")
+        plt.close(fig)
 
 
 if __name__ == "__main__":

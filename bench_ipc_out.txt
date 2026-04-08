@@ -4,75 +4,75 @@ Warmup: 20 msgs, Measured: 200 msgs
 
 === cydr + zenoh: raw Image ===
   end-to-end (200 msgs, 3,686,448 bytes)
-    mean   =     1492.9 µs
-    median =      574.4 µs
-    p95    =     4177.1 µs
-    p99    =     8774.0 µs
-    min    =      504.0 µs
-    max    =    10257.4 µs
+    mean   =     1773.8 µs
+    median =      595.7 µs
+    p95    =     9530.3 µs
+    p99    =    11894.4 µs
+    min    =      527.5 µs
+    max    =    16571.7 µs
 
 === protobuf + zenoh: raw Image ===
   end-to-end (200 msgs, 3,686,420 bytes)
-    mean   =     3029.0 µs
-    median =     1208.3 µs
-    p95    =    12294.6 µs
-    p99    =    17614.1 µs
-    min    =      527.6 µs
-    max    =    23210.6 µs
+    mean   =     2192.9 µs
+    median =     1160.1 µs
+    p95    =     4843.2 µs
+    p99    =    15521.6 µs
+    min    =      519.6 µs
+    max    =    17605.4 µs
 
 === protobuf(C) + zenoh: raw Image ===
   end-to-end (200 msgs, 3,686,420 bytes)
-    mean   =     2073.8 µs
-    median =      589.2 µs
-    p95    =     8530.0 µs
-    p99    =    13829.2 µs
-    min    =      509.2 µs
-    max    =    15086.6 µs
+    mean   =     3559.8 µs
+    median =      587.0 µs
+    p95    =    18766.7 µs
+    p99    =    29310.2 µs
+    min    =      507.0 µs
+    max    =    34629.0 µs
 
 === LCM: raw Image ===
   end-to-end (200 msgs, 3,686,425 bytes)
-    mean   =     3123.9 µs
-    median =     3049.7 µs
-    p95    =     5712.4 µs
-    p99    =     6841.2 µs
-    min    =     1465.1 µs
-    max    =     7717.2 µs
+    mean   =     3082.8 µs
+    median =     3010.2 µs
+    p95    =     5419.1 µs
+    p99    =     6747.9 µs
+    min    =     1648.7 µs
+    max    =     7951.6 µs
 
 === cydr + zenoh: JointState ===
   end-to-end (200 msgs, 644 bytes)
-    mean   =      537.2 µs
-    median =       11.3 µs
-    p95    =     3051.7 µs
-    p99    =     3742.0 µs
-    min    =        5.4 µs
-    max    =     3746.7 µs
+    mean   =      318.3 µs
+    median =       10.5 µs
+    p95    =     1994.6 µs
+    p99    =     2740.8 µs
+    min    =        5.7 µs
+    max    =     3224.9 µs
 
 === protobuf + zenoh: JointState ===
   end-to-end (200 msgs, 543 bytes)
-    mean   =      184.0 µs
-    median =        9.6 µs
-    p95    =     1580.2 µs
-    p99    =     2458.4 µs
-    min    =        5.5 µs
-    max    =     2746.3 µs
+    mean   =      321.0 µs
+    median =       10.4 µs
+    p95    =     2199.8 µs
+    p99    =     3431.5 µs
+    min    =        5.4 µs
+    max    =     3752.3 µs
 
 === protobuf(C) + zenoh: JointState ===
   end-to-end (200 msgs, 543 bytes)
-    mean   =      241.9 µs
-    median =       10.0 µs
-    p95    =     1742.2 µs
-    p99    =     2471.3 µs
-    min    =        5.3 µs
-    max    =     2724.3 µs
+    mean   =       19.0 µs
+    median =        9.3 µs
+    p95    =       25.1 µs
+    p99    =      357.7 µs
+    min    =        5.2 µs
+    max    =      801.6 µs
 
 === LCM: JointState ===
   end-to-end (200 msgs, 594 bytes)
-    mean   =      457.4 µs
-    median =       22.1 µs
-    p95    =     2405.1 µs
-    p99    =     2861.4 µs
-    min    =       12.3 µs
-    max    =     3091.9 µs
+    mean   =      239.0 µs
+    median =       21.5 µs
+    p95    =     1655.8 µs
+    p99    =     2499.2 µs
+    min    =       12.9 µs
+    max    =     3110.9 µs
 
 === Generating plots ===
   → saved calib3d/bench_ipc_image.png
