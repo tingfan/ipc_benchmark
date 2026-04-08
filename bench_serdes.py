@@ -237,7 +237,7 @@ def bench_proto_jointstate(names, pos, vel, eff):
 
 def bench_google_proto_image(img_flat: np.ndarray, jpeg_bytes: bytes):
     import sys
-    pass  # bench_msgs_pb2 is in same directory
+    pass  # generated packages are in same directory
     from bench_msgs_pb2 import Image, CompressedImage
 
     print("\n=== Google protobuf/upb (raw Image) ===")
@@ -282,7 +282,7 @@ def bench_google_proto_image(img_flat: np.ndarray, jpeg_bytes: bytes):
 
 def bench_google_proto_jointstate(names, pos, vel, eff):
     import sys
-    pass  # bench_msgs_pb2 is in same directory
+    pass  # generated packages are in same directory
     from bench_msgs_pb2 import JointState
 
     print("\n=== Google protobuf/upb (JointState) ===")
@@ -308,14 +308,18 @@ def bench_google_proto_jointstate(names, pos, vel, eff):
 # ── LCM ───────────────────────────────────────────────────────────────────────
 
 def bench_lcm_image(img_flat: np.ndarray, jpeg_bytes: bytes):
-    from lcm_types import LcmImage, LcmCompressedImage
+    import sys
+    pass  # generated packages are in same directory
+    from bench import Image as LcmImage, CompressedImage as LcmCompressedImage
 
     print("\n=== LCM (raw Image) ===")
-    msg = LcmImage(
-        timestamp=0, height=H, width=W,
-        encoding="bgr8", step=W * C,
-        data=bytes(img_flat),
-    )
+    msg = LcmImage()
+    msg.height = H
+    msg.width = W
+    msg.encoding = "bgr8"
+    msg.step = W * C
+    msg.data_len = len(img_flat)
+    msg.data = bytes(img_flat)
     blob = msg.encode()
     print(f"  blob size: {len(blob):,} bytes")
 
@@ -333,7 +337,10 @@ def bench_lcm_image(img_flat: np.ndarray, jpeg_bytes: bytes):
     print("  ✓ roundtrip correctness verified")
 
     # CompressedImage
-    cmsg = LcmCompressedImage(timestamp=0, format="jpeg", data=jpeg_bytes)
+    cmsg = LcmCompressedImage()
+    cmsg.format = "jpeg"
+    cmsg.data_len = len(jpeg_bytes)
+    cmsg.data = jpeg_bytes
     cblob = cmsg.encode()
     print(f"  CompressedImage blob size: {len(cblob):,} bytes")
 
@@ -351,13 +358,17 @@ def bench_lcm_image(img_flat: np.ndarray, jpeg_bytes: bytes):
 
 
 def bench_lcm_jointstate(names, pos, vel, eff):
-    from lcm_types import LcmJointState
+    import sys
+    pass  # generated packages are in same directory
+    from bench import JointState as LcmJointState
 
     print("\n=== LCM (JointState) ===")
-    msg = LcmJointState(
-        timestamp=0, num_joints=len(names),
-        name=names, position=pos, velocity=vel, effort=eff,
-    )
+    msg = LcmJointState()
+    msg.num_joints = len(names)
+    msg.name = names
+    msg.position = pos
+    msg.velocity = vel
+    msg.effort = eff
     blob = msg.encode()
     print(f"  blob size: {len(blob):,} bytes")
 
@@ -370,7 +381,7 @@ def bench_lcm_jointstate(names, pos, vel, eff):
     bench("deserialize (JointState)", deser)
 
     rt = LcmJointState.decode(blob)
-    assert rt.name == names and rt.position == pos
+    assert rt.name == names and list(rt.position) == pos
     print("  ✓ roundtrip correctness verified")
 
 
@@ -494,7 +505,7 @@ def bench_jointstate():
 
 def print_payload_sizes(img_flat, jpeg_bytes, names, pos, vel, eff):
     import sys
-    pass  # bench_msgs_pb2 is in same directory
+    pass  # generated packages are in same directory
 
     from ros2_pyterfaces.cyclone.sensor_msgs.msg import (
         Image as CycloneImage, CompressedImage as CycloneCompressed,
@@ -504,7 +515,7 @@ def print_payload_sizes(img_flat, jpeg_bytes, names, pos, vel, eff):
     )
     from ros2_pyterfaces.cyclone.sensor_msgs.msg import JointState as CycloneJS
     from ros2_pyterfaces.cydr.sensor_msgs.msg import JointState as CydrJS
-    from lcm_types import LcmImage, LcmJointState, LcmCompressedImage
+    from bench import Image as LcmImage, JointState as LcmJointState, CompressedImage as LcmCompressedImage
     from bench_msgs_pb2 import Image as PbImage, JointState as PbJS
 
     ProtoImage, ProtoJointState, ProtoCompressedImage = _get_proto_types()
@@ -514,13 +525,16 @@ def print_payload_sizes(img_flat, jpeg_bytes, names, pos, vel, eff):
     cyd_img = CydrImage(height=np.uint32(H), width=np.uint32(W), encoding=b"bgr8", is_bigendian=np.uint8(0), step=np.uint32(W*C), data=img_flat)
     bp_img = ProtoImage(height=H, width=W, encoding="bgr8", is_bigendian=0, step=W*C, data=bytes(img_flat))
     gpb_img = PbImage(height=H, width=W, encoding="bgr8", is_bigendian=0, step=W*C, data=bytes(img_flat))
-    lcm_img = LcmImage(timestamp=0, height=H, width=W, encoding="bgr8", step=W*C, data=bytes(img_flat))
+    lcm_img = LcmImage()
+    lcm_img.height = H; lcm_img.width = W; lcm_img.encoding = "bgr8"
+    lcm_img.step = W * C; lcm_img.data_len = len(img_flat); lcm_img.data = bytes(img_flat)
 
     # CompressedImage sizes
     cyc_comp = CycloneCompressed(format="jpeg", data=list(jpeg_bytes))
     jpeg_arr = np.frombuffer(jpeg_bytes, dtype=np.uint8)
     cyd_comp = CydrCompressed(format=b"jpeg", data=jpeg_arr)
-    lcm_comp = LcmCompressedImage(timestamp=0, format="jpeg", data=jpeg_bytes)
+    lcm_comp = LcmCompressedImage()
+    lcm_comp.format = "jpeg"; lcm_comp.data_len = len(jpeg_bytes); lcm_comp.data = jpeg_bytes
 
     # JointState sizes
     names_b = np.array([n.encode() for n in names], dtype=np.bytes_)
@@ -528,7 +542,9 @@ def print_payload_sizes(img_flat, jpeg_bytes, names, pos, vel, eff):
     cyd_js = CydrJS(name=names_b, position=np.array(pos), velocity=np.array(vel), effort=np.array(eff))
     bp_js = ProtoJointState(name=names, position=pos, velocity=vel, effort=eff)
     gpb_js = PbJS(name=names, position=pos, velocity=vel, effort=eff)
-    lcm_js = LcmJointState(timestamp=0, num_joints=len(names), name=names, position=pos, velocity=vel, effort=eff)
+    lcm_js = LcmJointState()
+    lcm_js.num_joints = len(names); lcm_js.name = names
+    lcm_js.position = pos; lcm_js.velocity = vel; lcm_js.effort = eff
 
     raw = W * H * C
 

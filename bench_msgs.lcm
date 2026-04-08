@@ -1,0 +1,24 @@
+package bench;
+
+struct Image {
+    int32_t height;
+    int32_t width;
+    string encoding;
+    int32_t step;
+    int32_t data_len;
+    byte data[data_len];
+}
+
+struct CompressedImage {
+    string format;
+    int32_t data_len;
+    byte data[data_len];
+}
+
+struct JointState {
+    int32_t num_joints;
+    string name[num_joints];
+    double position[num_joints];
+    double velocity[num_joints];
+    double effort[num_joints];
+}

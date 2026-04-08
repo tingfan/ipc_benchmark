@@ -289,7 +289,7 @@ def bench_zenoh_proto_joint(names, pos, vel, eff):
 def bench_zenoh_gpb_image(img_flat):
     import zenoh
     import sys
-    pass  # bench_msgs_pb2 is in same directory
+    pass  # generated packages are in same directory
     from bench_msgs_pb2 import Image
 
     print("\n=== protobuf(C) + zenoh: raw Image ===")
@@ -338,7 +338,7 @@ def bench_zenoh_gpb_image(img_flat):
 def bench_zenoh_gpb_joint(names, pos, vel, eff):
     import zenoh
     import sys
-    pass  # bench_msgs_pb2 is in same directory
+    pass  # generated packages are in same directory
     from bench_msgs_pb2 import JointState
 
     print("\n=== protobuf(C) + zenoh: JointState ===")
@@ -444,14 +444,18 @@ def bench_lcm_image(img_flat):
 def bench_lcm_joint(names, pos, vel, eff):
     import lcm as lcmlib
     import select
-    from lcm_types import LcmJointState
+    import sys
+    pass  # generated packages are in same directory
+    from bench import JointState as LcmJointState
 
     print("\n=== LCM: JointState ===")
 
-    msg = LcmJointState(
-        timestamp=0, num_joints=len(names),
-        name=names, position=pos, velocity=vel, effort=eff,
-    )
+    msg = LcmJointState()
+    msg.num_joints = len(names)
+    msg.name = names
+    msg.position = pos
+    msg.velocity = vel
+    msg.effort = eff
     body = msg.encode()
 
     latencies = []
