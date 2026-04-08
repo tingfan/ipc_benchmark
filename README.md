@@ -9,7 +9,7 @@ Benchmarks comparing serialization performance and IPC latency for robotics mess
 - `ros2_pyterfaces` cydr backend (CDR via cydr/msgspec)
 - [betterproto](https://github.com/danielgtaylor/python-betterproto) (pure Python protobuf)
 - Google [protobuf](https://protobuf.dev/) with C/upb backend
-- [LCM](https://github.com/lcm-proj/lcm) (struct-based encode/decode)
+- [LCM](https://github.com/lcm-proj/lcm) (types generated via `lcm-gen`)
 - Message types: `Image` (1280×960×3 raw), `CompressedImage` (JPEG), `JointState` (16 joints)
 - Roundtrip correctness verified for all backends
 
@@ -35,6 +35,16 @@ For LCM large-message benchmarks, increase the kernel UDP buffer:
 sudo sysctl -w net.core.rmem_max=20971520 net.core.rmem_default=20971520
 ```
 
+LCM types are generated from `bench_msgs.lcm` via:
+```bash
+pixi run lcm-gen -p bench_msgs.lcm
+```
+
+Protobuf types are generated from `bench_msgs.proto` via:
+```bash
+pixi run protoc --python_out=. bench_msgs.proto
+```
+
 ## Run
 
 ```bash
@@ -53,37 +63,37 @@ pixi run python bench_ipc.py
 
 | | Cyclone | cydr | betterproto | protobuf(C) | LCM |
 |---|---|---|---|---|---|
-| serialize | 131,000 | 554 | 526 | 513 | 501 |
-| deserialize | 56,000 | 213 | 439 | 200 | 206 |
+| serialize | 128,665 | 575 | 569 | 561 | 551 |
+| deserialize | 56,685 | 243 | 503 | 237 | 235 |
 
 **CompressedImage (JPEG, ~1.1 MB):**
 
 | | Cyclone | cydr | betterproto | protobuf(C) | LCM |
 |---|---|---|---|---|---|
-| serialize | 20,780 | 69 | 126 | 115 | ~500 |
-| deserialize | 8,540 | 53 | 137 | 48 | ~200 |
+| serialize | 20,645 | 75 | 131 | 117 | 131 |
+| deserialize | 8,514 | 54 | 139 | 47 | 49 |
 
 **JointState (16 joints):**
 
 | | Cyclone | cydr | betterproto | protobuf(C) | LCM |
 |---|---|---|---|---|---|
-| serialize | 42 | 4.3 | 65 | 0.6 | 7.7 |
-| deserialize | 39 | 6.3 | 82 | 1.1 | 7.7 |
+| serialize | 42 | 2.7 | 106 | 0.6 | 7.8 |
+| deserialize | 38 | 4.5 | 84 | 1.1 | 9.3 |
 
 ### Payload sizes (bytes)
 
 | Message | CDR | Protobuf | LCM |
 |---|---|---|---|
 | raw Image | 3,686,448 | 3,686,420 | 3,686,433 |
-| CompressedImage (JPEG) | 1,101,772 | 1,101,746 | 1,101,757 |
+| CompressedImage (JPEG) | 1,102,384 | 1,102,358 | 1,102,369 |
 | JointState (16 joints) | 644 | 543 | 594 |
 
 ### IPC median latency (µs)
 
 | Message | cydr+zenoh | betterproto+zenoh | protobuf(C)+zenoh | LCM |
 |---|---|---|---|---|
-| Image (3.7 MB) | 602 | 2,101 | 584 | 2,852 |
-| JointState (644 B) | 10.7 | 10.6 | 8.0 | 19.4 |
+| Image (3.7 MB) | 587 | 1,658 | 598 | 3,063 |
+| JointState (644 B) | 10.5 | 11.1 | 10.2 | 20.2 |
 
 ### IPC latency box plots
 
