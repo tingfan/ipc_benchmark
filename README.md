@@ -58,6 +58,12 @@ pixi run python bench_ipc.py
 | Image (3.7 MB) | 578 | 2,781 |
 | JointState (644 B) | 10.7 | 21.3 |
 
+### IPC latency box plots
+
+![Image IPC latency](bench_ipc_image.png)
+
+![JointState IPC latency](bench_ipc_joint.png)
+
 ## Dependencies
 
 Managed by pixi. Key packages:
