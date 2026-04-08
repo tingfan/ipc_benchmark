@@ -84,3 +84,35 @@ class LcmJointState:
         obj.velocity = list(struct.unpack_from(f">{obj.num_joints}d", data, off)); off += 8 * obj.num_joints
         obj.effort = list(struct.unpack_from(f">{obj.num_joints}d", data, off))
         return obj
+
+
+class LcmCompressedImage:
+    """LCM type for a compressed image."""
+
+    __slots__ = ("timestamp", "format", "data")
+
+    def __init__(self, timestamp=0, format="", data=b""):
+        self.timestamp = timestamp
+        self.format = format
+        self.data = data
+
+    def encode(self):
+        buf = bytearray()
+        buf += struct.pack(">q", self.timestamp)
+        fmt = self.format.encode("utf-8") if isinstance(self.format, str) else self.format
+        buf += struct.pack(">I", len(fmt) + 1)
+        buf += fmt + b"\0"
+        buf += struct.pack(">I", len(self.data))
+        buf += bytes(self.data)
+        return bytes(buf)
+
+    @classmethod
+    def decode(cls, data):
+        obj = cls()
+        off = 0
+        obj.timestamp, = struct.unpack_from(">q", data, off); off += 8
+        fmt_len, = struct.unpack_from(">I", data, off); off += 4
+        obj.format = data[off:off + fmt_len - 1].decode("utf-8"); off += fmt_len
+        n, = struct.unpack_from(">I", data, off); off += 4
+        obj.data = data[off:off + n]
+        return obj

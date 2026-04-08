@@ -307,8 +307,8 @@ def bench_google_proto_jointstate(names, pos, vel, eff):
 
 # ── LCM ───────────────────────────────────────────────────────────────────────
 
-def bench_lcm_image(img_flat: np.ndarray):
-    from lcm_types import LcmImage
+def bench_lcm_image(img_flat: np.ndarray, jpeg_bytes: bytes):
+    from lcm_types import LcmImage, LcmCompressedImage
 
     print("\n=== LCM (raw Image) ===")
     msg = LcmImage(
@@ -331,6 +331,23 @@ def bench_lcm_image(img_flat: np.ndarray):
     assert rt.height == H and rt.width == W and rt.encoding == "bgr8"
     assert rt.data == bytes(img_flat), "LCM raw Image roundtrip MISMATCH"
     print("  ✓ roundtrip correctness verified")
+
+    # CompressedImage
+    cmsg = LcmCompressedImage(timestamp=0, format="jpeg", data=jpeg_bytes)
+    cblob = cmsg.encode()
+    print(f"  CompressedImage blob size: {len(cblob):,} bytes")
+
+    def ser_comp():
+        cmsg.encode()
+    def deser_comp():
+        LcmCompressedImage.decode(cblob)
+
+    bench("serialize   (CompressedImage)", ser_comp)
+    bench("deserialize (CompressedImage)", deser_comp)
+
+    crt = LcmCompressedImage.decode(cblob)
+    assert crt.data == jpeg_bytes, "LCM CompressedImage roundtrip MISMATCH"
+    print("  ✓ CompressedImage roundtrip verified")
 
 
 def bench_lcm_jointstate(names, pos, vel, eff):
@@ -372,7 +389,7 @@ def main():
     bench_cydr(img_flat, jpeg_bytes)
     bench_proto_image(img_flat, jpeg_bytes)
     bench_google_proto_image(img_flat, jpeg_bytes)
-    bench_lcm_image(img_flat)
+    bench_lcm_image(img_flat, jpeg_bytes)
 
     # cross-backend: verify cyclone and cydr produce identical blobs
     print("\n=== Cross-backend check ===")
@@ -487,7 +504,7 @@ def print_payload_sizes(img_flat, jpeg_bytes, names, pos, vel, eff):
     )
     from ros2_pyterfaces.cyclone.sensor_msgs.msg import JointState as CycloneJS
     from ros2_pyterfaces.cydr.sensor_msgs.msg import JointState as CydrJS
-    from lcm_types import LcmImage, LcmJointState
+    from lcm_types import LcmImage, LcmJointState, LcmCompressedImage
     from bench_msgs_pb2 import Image as PbImage, JointState as PbJS
 
     ProtoImage, ProtoJointState, ProtoCompressedImage = _get_proto_types()
@@ -503,6 +520,7 @@ def print_payload_sizes(img_flat, jpeg_bytes, names, pos, vel, eff):
     cyc_comp = CycloneCompressed(format="jpeg", data=list(jpeg_bytes))
     jpeg_arr = np.frombuffer(jpeg_bytes, dtype=np.uint8)
     cyd_comp = CydrCompressed(format=b"jpeg", data=jpeg_arr)
+    lcm_comp = LcmCompressedImage(timestamp=0, format="jpeg", data=jpeg_bytes)
 
     # JointState sizes
     names_b = np.array([n.encode() for n in names], dtype=np.bytes_)
@@ -526,7 +544,7 @@ def print_payload_sizes(img_flat, jpeg_bytes, names, pos, vel, eff):
     bp_comp = ProtoCompressedImage(format="jpeg", data=jpeg_bytes)
     from bench_msgs_pb2 import CompressedImage as PbComp
     gpb_comp = PbComp(format="jpeg", data=jpeg_bytes)
-    print(f"  {'CompressedImage (JPEG)':<25s} {len(cyc_comp.serialize()):>10,} {len(bytes(bp_comp)):>10,} {len(gpb_comp.SerializeToString()):>10,} {'n/a':>10s}")
+    print(f"  {'CompressedImage (JPEG)':<25s} {len(cyc_comp.serialize()):>10,} {len(bytes(bp_comp)):>10,} {len(gpb_comp.SerializeToString()):>10,} {len(lcm_comp.encode()):>10,}")
     print(f"  {'JointState (16 joints)':<25s} {len(cyc_js.serialize()):>10,} {len(bytes(bp_js)):>10,} {len(gpb_js.SerializeToString()):>10,} {len(lcm_js.encode()):>10,}")
 
 
