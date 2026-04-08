@@ -100,8 +100,11 @@ def bench_zenoh_cydr_image(img_flat):
 
     received.wait(timeout=10)
     sub.undeclare()
-    time.sleep(0.1)
-    session.close()
+    time.sleep(0.5)
+    try:
+        session.close()
+    except Exception:
+        pass  # zenoh close can timeout
 
     if latencies:
         report(f"end-to-end ({len(latencies)} msgs, {len(blob):,} bytes)", latencies)
@@ -153,8 +156,11 @@ def bench_zenoh_cydr_joint(names, pos, vel, eff):
 
     received.wait(timeout=10)
     sub.undeclare()
-    time.sleep(0.1)
-    session.close()
+    time.sleep(0.5)
+    try:
+        session.close()
+    except Exception:
+        pass  # zenoh close can timeout
 
     if latencies:
         report(f"end-to-end ({len(latencies)} msgs, {len(blob):,} bytes)", latencies)
@@ -229,8 +235,11 @@ def bench_zenoh_proto_image(img_flat):
 
     received.wait(timeout=10)
     sub.undeclare()
-    time.sleep(0.1)
-    session.close()
+    time.sleep(0.5)
+    try:
+        session.close()
+    except Exception:
+        pass  # zenoh close can timeout
 
     if latencies:
         report(f"end-to-end ({len(latencies)} msgs, {len(blob):,} bytes)", latencies)
@@ -276,8 +285,11 @@ def bench_zenoh_proto_joint(names, pos, vel, eff):
 
     received.wait(timeout=10)
     sub.undeclare()
-    time.sleep(0.1)
-    session.close()
+    time.sleep(0.5)
+    try:
+        session.close()
+    except Exception:
+        pass  # zenoh close can timeout
 
     if latencies:
         report(f"end-to-end ({len(latencies)} msgs, {len(blob):,} bytes)", latencies)
@@ -327,8 +339,11 @@ def bench_zenoh_gpb_image(img_flat):
 
     received.wait(timeout=10)
     sub.undeclare()
-    time.sleep(0.1)
-    session.close()
+    time.sleep(0.5)
+    try:
+        session.close()
+    except Exception:
+        pass  # zenoh close can timeout
 
     if latencies:
         report(f"end-to-end ({len(latencies)} msgs, {len(blob):,} bytes)", latencies)
@@ -376,8 +391,11 @@ def bench_zenoh_gpb_joint(names, pos, vel, eff):
 
     received.wait(timeout=10)
     sub.undeclare()
-    time.sleep(0.1)
-    session.close()
+    time.sleep(0.5)
+    try:
+        session.close()
+    except Exception:
+        pass  # zenoh close can timeout
 
     if latencies:
         report(f"end-to-end ({len(latencies)} msgs, {len(blob):,} bytes)", latencies)
@@ -503,6 +521,106 @@ def bench_lcm_joint(names, pos, vel, eff):
     return latencies
 
 
+# ── eCAL + protobuf(C) ────────────────────────────────────────────────────────
+
+def _ecal_init():
+    import ecal.nanobind_core as ecal_core
+    ecal_core.initialize("bench_ipc")
+    return ecal_core
+
+
+def _ecal_fini(ecal_core):
+    ecal_core.finalize()
+
+
+def bench_ecal_gpb_image(img_flat):
+    ecal_core = _ecal_init()
+    from ecal.msg.proto.core import Publisher as ProtoPub, Subscriber as ProtoSub
+    from bench_msgs_pb2 import Image
+
+    print("\n=== protobuf(C) + eCAL: raw Image ===")
+
+    msg = Image(height=H, width=W, encoding="bgr8", is_bigendian=0, step=W * C, data=bytes(img_flat))
+
+    latencies = []
+    received = threading.Event()
+    count = [0]
+
+    def on_msg(publisher_id, data):
+        t_recv = time.monotonic_ns()
+        t_send = data.send_timestamp
+        count[0] += 1
+        if count[0] > N_WARMUP:
+            latencies.append(t_recv - t_send)
+        if count[0] >= N_WARMUP + N_MSGS:
+            received.set()
+
+    sub = ProtoSub(Image, "bench/ecal_image")
+    sub.set_receive_callback(on_msg)
+    pub = ProtoPub(Image, "bench/ecal_image")
+
+    time.sleep(2.0)  # eCAL SHM discovery
+
+    blob_size = len(msg.SerializeToString())
+    for _ in range(N_WARMUP + N_MSGS):
+        pub.send(msg, time.monotonic_ns())
+        time.sleep(0.001)
+
+    received.wait(timeout=30)
+    sub.remove_receive_callback()
+    _ecal_fini(ecal_core)
+
+    if latencies:
+        report(f"end-to-end ({len(latencies)} msgs, {blob_size:,} bytes)", latencies)
+    else:
+        print("  ⚠ no messages received")
+    return latencies
+
+
+def bench_ecal_gpb_joint(names, pos, vel, eff):
+    ecal_core = _ecal_init()
+    from ecal.msg.proto.core import Publisher as ProtoPub, Subscriber as ProtoSub
+    from bench_msgs_pb2 import JointState
+
+    print("\n=== protobuf(C) + eCAL: JointState ===")
+
+    msg = JointState(name=names, position=pos, velocity=vel, effort=eff)
+
+    latencies = []
+    received = threading.Event()
+    count = [0]
+
+    def on_msg(publisher_id, data):
+        t_recv = time.monotonic_ns()
+        t_send = data.send_timestamp
+        count[0] += 1
+        if count[0] > N_WARMUP:
+            latencies.append(t_recv - t_send)
+        if count[0] >= N_WARMUP + N_MSGS:
+            received.set()
+
+    sub = ProtoSub(JointState, "bench/ecal_joint")
+    sub.set_receive_callback(on_msg)
+    pub = ProtoPub(JointState, "bench/ecal_joint")
+
+    time.sleep(2.0)
+
+    blob_size = len(msg.SerializeToString())
+    for _ in range(N_WARMUP + N_MSGS):
+        pub.send(msg, time.monotonic_ns())
+        time.sleep(0.0002)
+
+    received.wait(timeout=10)
+    sub.remove_receive_callback()
+    _ecal_fini(ecal_core)
+
+    if latencies:
+        report(f"end-to-end ({len(latencies)} msgs, {blob_size:,} bytes)", latencies)
+    else:
+        print("  ⚠ no messages received")
+    return latencies
+
+
 # ── main ─────────────────────────────────────────────────────────────────────
 
 def plot_results(results: dict, title: str, filename: str):
@@ -519,7 +637,7 @@ def plot_results(results: dict, title: str, filename: str):
     bp = ax.boxplot(data, tick_labels=labels, patch_artist=True, showfliers=True,
                     flierprops=dict(marker='.', markersize=3, alpha=0.5))
 
-    colors = ['#4C72B0', '#DD8452', '#55A868', '#C44E52']
+    colors = ['#4C72B0', '#DD8452', '#55A868', '#C44E52', '#8172B3']
     for patch, color in zip(bp['boxes'], colors):
         patch.set_facecolor(color)
         patch.set_alpha(0.7)
@@ -554,22 +672,24 @@ def main():
     p_img = bench_zenoh_proto_image(img_flat)
     g_img = bench_zenoh_gpb_image(img_flat)
     l_img = bench_lcm_image(img_flat)
+    e_img = bench_ecal_gpb_image(img_flat)
 
     # JointState benchmarks
     z_js = bench_zenoh_cydr_joint(names, pos, vel, eff)
     p_js = bench_zenoh_proto_joint(names, pos, vel, eff)
     g_js = bench_zenoh_gpb_joint(names, pos, vel, eff)
     l_js = bench_lcm_joint(names, pos, vel, eff)
+    e_js = bench_ecal_gpb_joint(names, pos, vel, eff)
 
     # Box plots
     print("\n=== Generating plots ===")
     plot_results(
-        {"cydr+zenoh": z_img, "betterproto\n+zenoh": p_img, "protobuf(C)\n+zenoh": g_img, "LCM": l_img},
+        {"cydr+zenoh": z_img, "betterproto\n+zenoh": p_img, "protobuf(C)\n+zenoh": g_img, "LCM": l_img, "protobuf(C)\n+eCAL": e_img},
         f"IPC Latency: Raw Image ({W}×{H}×{C})",
         "bench_ipc_image.png",
     )
     plot_results(
-        {"cydr+zenoh": z_js, "betterproto\n+zenoh": p_js, "protobuf(C)\n+zenoh": g_js, "LCM": l_js},
+        {"cydr+zenoh": z_js, "betterproto\n+zenoh": p_js, "protobuf(C)\n+zenoh": g_js, "LCM": l_js, "protobuf(C)\n+eCAL": e_js},
         f"IPC Latency: JointState ({N_JOINTS} joints)",
         "bench_ipc_joint.png",
     )

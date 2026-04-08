@@ -17,9 +17,10 @@ Benchmarks comparing serialization performance and IPC latency for robotics mess
 - cydr + zenoh
 - betterproto + zenoh
 - Google protobuf(C) + zenoh
+- Google protobuf(C) + [eCAL](https://github.com/eclipse-ecal/ecal) (SHM transport)
 - LCM (UDP multicast)
 - Measures single-process pub/sub latency with embedded timestamps
-- Generates box plots comparing all four stacks
+- Generates box plots comparing all five stacks
 
 ## Setup
 
@@ -90,10 +91,10 @@ pixi run python bench_ipc.py
 
 ### IPC median latency (µs)
 
-| Message | cydr+zenoh | betterproto+zenoh | protobuf(C)+zenoh | LCM |
-|---|---|---|---|---|
-| Image (3.7 MB) | 574 | 1,208 | 589 | 3,050 |
-| JointState (644 B) | 11.3 | 9.6 | 10.0 | 22.1 |
+| Message | cydr+zenoh | betterproto+zenoh | protobuf(C)+zenoh | LCM | protobuf(C)+eCAL |
+|---|---|---|---|---|---|
+| Image (3.7 MB) | 579 | 2,078 | 584 | 2,963 | 2,156 |
+| JointState (644 B) | 9.5 | 11.5 | 11.3 | 18.8 | 16.3 |
 
 ### IPC latency box plots
 
@@ -115,3 +116,4 @@ Managed by pixi. Key packages:
 - [lcm](https://github.com/lcm-proj/lcm) — Lightweight Communications and Marshalling
 - [betterproto](https://github.com/danielgtaylor/python-betterproto) — pure Python Protobuf 3
 - [protobuf](https://protobuf.dev/) — Google Protocol Buffers with C/upb backend
+- [eclipse-ecal](https://github.com/eclipse-ecal/ecal) — high-performance pub/sub with SHM transport

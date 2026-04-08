@@ -4,76 +4,99 @@ Warmup: 20 msgs, Measured: 200 msgs
 
 === cydr + zenoh: raw Image ===
   end-to-end (200 msgs, 3,686,448 bytes)
-    mean   =     1773.8 µs
-    median =      595.7 µs
-    p95    =     9530.3 µs
-    p99    =    11894.4 µs
-    min    =      527.5 µs
-    max    =    16571.7 µs
+    mean   =     1201.1 µs
+    median =      578.9 µs
+    p95    =     3968.8 µs
+    p99    =    10809.6 µs
+    min    =      477.7 µs
+    max    =    12374.0 µs
 
 === protobuf + zenoh: raw Image ===
   end-to-end (200 msgs, 3,686,420 bytes)
-    mean   =     2192.9 µs
-    median =     1160.1 µs
-    p95    =     4843.2 µs
-    p99    =    15521.6 µs
-    min    =      519.6 µs
-    max    =    17605.4 µs
+    mean   =     3321.2 µs
+    median =     2077.7 µs
+    p95    =    13055.5 µs
+    p99    =    13965.7 µs
+    min    =      547.7 µs
+    max    =    14629.8 µs
 
 === protobuf(C) + zenoh: raw Image ===
   end-to-end (200 msgs, 3,686,420 bytes)
-    mean   =     3559.8 µs
-    median =      587.0 µs
-    p95    =    18766.7 µs
-    p99    =    29310.2 µs
-    min    =      507.0 µs
-    max    =    34629.0 µs
+    mean   =     2105.5 µs
+    median =      584.4 µs
+    p95    =    11995.1 µs
+    p99    =    17003.9 µs
+    min    =      502.6 µs
+    max    =    17232.9 µs
 
 === LCM: raw Image ===
   end-to-end (200 msgs, 3,686,425 bytes)
-    mean   =     3082.8 µs
-    median =     3010.2 µs
-    p95    =     5419.1 µs
-    p99    =     6747.9 µs
-    min    =     1648.7 µs
-    max    =     7951.6 µs
+    mean   =     2969.7 µs
+    median =     2963.4 µs
+    p95    =     4807.8 µs
+    p99    =     5762.3 µs
+    min    =     1550.1 µs
+    max    =     7047.2 µs
+Protobuf version: 6.33.6
+
+=== protobuf(C) + eCAL: raw Image ===
+  end-to-end (199 msgs, 3,686,420 bytes)
+    mean   =     2299.4 µs
+    median =     2155.9 µs
+    p95    =     3048.4 µs
+    p99    =     5563.3 µs
+    min    =     1999.8 µs
+    max    =     6003.4 µs
 
 === cydr + zenoh: JointState ===
   end-to-end (200 msgs, 644 bytes)
-    mean   =      318.3 µs
-    median =       10.5 µs
-    p95    =     1994.6 µs
-    p99    =     2740.8 µs
-    min    =        5.7 µs
-    max    =     3224.9 µs
+    mean   =      104.0 µs
+    median =        9.5 µs
+    p95    =      862.7 µs
+    p99    =     1608.3 µs
+    min    =        5.3 µs
+    max    =     3475.8 µs
 
 === protobuf + zenoh: JointState ===
   end-to-end (200 msgs, 543 bytes)
-    mean   =      321.0 µs
-    median =       10.4 µs
-    p95    =     2199.8 µs
-    p99    =     3431.5 µs
-    min    =        5.4 µs
-    max    =     3752.3 µs
+    mean   =      778.2 µs
+    median =       11.5 µs
+    p95    =     3134.4 µs
+    p99    =     3599.5 µs
+    min    =        5.6 µs
+    max    =     3739.6 µs
 
 === protobuf(C) + zenoh: JointState ===
   end-to-end (200 msgs, 543 bytes)
-    mean   =       19.0 µs
-    median =        9.3 µs
-    p95    =       25.1 µs
-    p99    =      357.7 µs
-    min    =        5.2 µs
-    max    =      801.6 µs
+    mean   =      512.9 µs
+    median =       11.3 µs
+    p95    =     2645.8 µs
+    p99    =     3489.6 µs
+    min    =        5.1 µs
+    max    =     3742.1 µs
 
 === LCM: JointState ===
   end-to-end (200 msgs, 594 bytes)
-    mean   =      239.0 µs
-    median =       21.5 µs
-    p95    =     1655.8 µs
-    p99    =     2499.2 µs
-    min    =       12.9 µs
-    max    =     3110.9 µs
+    mean   =      327.6 µs
+    median =       18.8 µs
+    p95    =     2187.7 µs
+    p99    =     3543.6 µs
+    min    =       12.4 µs
+    max    =     4012.4 µs
+
+=== protobuf(C) + eCAL: JointState ===
+  end-to-end (194 msgs, 543 bytes)
+    mean   =       20.9 µs
+    median =       16.3 µs
+    p95    =       37.0 µs
+    p99    =      111.4 µs
+    min    =       11.7 µs
+    max    =      225.1 µs
 
 === Generating plots ===
-  → saved calib3d/bench_ipc_image.png
-  → saved calib3d/bench_ipc_joint.png
+  → saved bench_ipc_image.png
+  → saved bench_ipc_joint.png
+[eCAL][Config] Specified yaml configuration path not valid:"ecal.yaml". Using default configuration.
+1775668689365 ms | gmp14-Super-Server | bench_ipc | 3522534 | error | Could not load eCAL time sync module libecaltime-localtime.so
+[eCAL][Config] Specified yaml configuration path not valid:"ecal.yaml". Using default configuration.
+1775668753244 ms | gmp14-Super-Server | bench_ipc | 3522534 | error | Could not load eCAL time sync module libecaltime-localtime.so
