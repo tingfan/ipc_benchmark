@@ -1,53 +1,53 @@
 Image size: 1280x960x3  (3,686,400 bytes raw)
 Warmup: 5, Iterations: 200
-JPEG size: 1,101,832 bytes (quality=90)
+JPEG size: 1,102,351 bytes (quality=90)
 
 === Cyclone backend ===
   Raw Image blob size: 3,686,448 bytes
-  serialize   (raw Image)...........................  127587.1 µs  (200 iters)
-  deserialize (raw Image)...........................   56412.9 µs  (200 iters)
-  CompressedImage blob size: 1,101,868 bytes
-  serialize   (CompressedImage).....................   20482.9 µs  (200 iters)
-  deserialize (CompressedImage).....................    8468.7 µs  (200 iters)
+  serialize   (raw Image)...........................  126034.6 µs  (200 iters)
+  deserialize (raw Image)...........................   55841.5 µs  (200 iters)
+  CompressedImage blob size: 1,102,387 bytes
+  serialize   (CompressedImage).....................   21411.1 µs  (200 iters)
+  deserialize (CompressedImage).....................    8477.2 µs  (200 iters)
   ✓ roundtrip correctness verified
 
 === cydr backend ===
   Raw Image blob size: 3,686,448 bytes
-  serialize   (raw Image)...........................     536.8 µs  (200 iters)
-  deserialize (raw Image)...........................     218.8 µs  (200 iters)
-  CompressedImage blob size: 1,101,868 bytes
-  serialize   (CompressedImage).....................      70.2 µs  (200 iters)
-  deserialize (CompressedImage).....................      60.3 µs  (200 iters)
+  serialize   (raw Image)...........................     562.2 µs  (200 iters)
+  deserialize (raw Image)...........................     216.2 µs  (200 iters)
+  CompressedImage blob size: 1,102,387 bytes
+  serialize   (CompressedImage).....................      73.0 µs  (200 iters)
+  deserialize (CompressedImage).....................      56.1 µs  (200 iters)
   ✓ roundtrip correctness verified
 
 === Protobuf/betterproto (raw Image) ===
   blob size: 3,686,420 bytes
-  serialize   (raw Image)...........................     542.7 µs  (200 iters)
-  deserialize (raw Image)...........................     454.3 µs  (200 iters)
+  serialize   (raw Image)...........................     530.5 µs  (200 iters)
+  deserialize (raw Image)...........................     453.5 µs  (200 iters)
   ✓ roundtrip correctness verified
-  CompressedImage blob size: 1,101,842 bytes
-  serialize   (CompressedImage).....................     131.2 µs  (200 iters)
-  deserialize (CompressedImage).....................     140.2 µs  (200 iters)
+  CompressedImage blob size: 1,102,361 bytes
+  serialize   (CompressedImage).....................     132.2 µs  (200 iters)
+  deserialize (CompressedImage).....................     139.6 µs  (200 iters)
   ✓ CompressedImage roundtrip verified
 
 === Google protobuf/upb (raw Image) ===
   blob size: 3,686,420 bytes
-  serialize   (raw Image)...........................     504.8 µs  (200 iters)
-  deserialize (raw Image)...........................     201.6 µs  (200 iters)
+  serialize   (raw Image)...........................     529.4 µs  (200 iters)
+  deserialize (raw Image)...........................     197.4 µs  (200 iters)
   ✓ roundtrip correctness verified
-  CompressedImage blob size: 1,101,842 bytes
-  serialize   (CompressedImage).....................     112.9 µs  (200 iters)
-  deserialize (CompressedImage).....................      47.0 µs  (200 iters)
+  CompressedImage blob size: 1,102,361 bytes
+  serialize   (CompressedImage).....................     116.8 µs  (200 iters)
+  deserialize (CompressedImage).....................      53.0 µs  (200 iters)
   ✓ CompressedImage roundtrip verified
 
 === LCM (raw Image) ===
   blob size: 3,686,433 bytes
-  serialize   (raw Image)...........................     511.7 µs  (200 iters)
-  deserialize (raw Image)...........................     207.7 µs  (200 iters)
+  serialize   (raw Image)...........................     552.7 µs  (200 iters)
+  deserialize (raw Image)...........................     213.2 µs  (200 iters)
   ✓ roundtrip correctness verified
-  CompressedImage blob size: 1,101,853 bytes
-  serialize   (CompressedImage).....................     129.7 µs  (200 iters)
-  deserialize (CompressedImage).....................      47.9 µs  (200 iters)
+  CompressedImage blob size: 1,102,372 bytes
+  serialize   (CompressedImage).....................     108.9 µs  (200 iters)
+  deserialize (CompressedImage).....................      47.5 µs  (200 iters)
   ✓ CompressedImage roundtrip verified
 
 === Cross-backend check ===
@@ -59,14 +59,14 @@ JointState: 16 joints
 
 === Cyclone backend (JointState) ===
   blob size: 644 bytes
-  serialize   (JointState)..........................      42.4 µs  (200 iters)
-  deserialize (JointState)..........................      36.9 µs  (200 iters)
+  serialize   (JointState)..........................      42.3 µs  (200 iters)
+  deserialize (JointState)..........................      39.0 µs  (200 iters)
   ✓ roundtrip correctness verified
 
 === cydr backend (JointState) ===
   blob size: 644 bytes
-  serialize   (JointState)..........................       3.0 µs  (200 iters)
-  deserialize (JointState)..........................       5.4 µs  (200 iters)
+  serialize   (JointState)..........................       4.5 µs  (200 iters)
+  deserialize (JointState)..........................       6.6 µs  (200 iters)
   ✓ roundtrip correctness verified
 
   ✓ cyclone and cydr JointState blobs identical
@@ -74,31 +74,31 @@ JointState: 16 joints
 === LCM (JointState) ===
   blob size: 594 bytes
   serialize   (JointState)..........................       8.0 µs  (200 iters)
-  deserialize (JointState)..........................       8.3 µs  (200 iters)
+  deserialize (JointState)..........................       7.2 µs  (200 iters)
   ✓ roundtrip correctness verified
 
 === Protobuf/betterproto (JointState) ===
   blob size: 543 bytes
-  serialize   (JointState)..........................     109.1 µs  (200 iters)
-  deserialize (JointState)..........................      87.1 µs  (200 iters)
+  serialize   (JointState)..........................     114.4 µs  (200 iters)
+  deserialize (JointState)..........................      78.3 µs  (200 iters)
   ✓ roundtrip correctness verified
 
 === Google protobuf/upb (JointState) ===
   blob size: 543 bytes
-  serialize   (JointState)..........................       0.6 µs  (200 iters)
-  deserialize (JointState)..........................       1.1 µs  (200 iters)
+  serialize   (JointState)..........................       0.9 µs  (200 iters)
+  deserialize (JointState)..........................       1.4 µs  (200 iters)
   ✓ roundtrip correctness verified
 
 ============================================================
 Payload sizes (bytes)
 ============================================================
   Raw pixel data: 3,686,400
-  JPEG data:      1,101,832
+  JPEG data:      1,102,351
 
   Message                          CDR   Protobuf   Proto(C)        LCM
   ------------------------- ---------- ---------- ---------- ----------
   raw Image                  3,686,448  3,686,420  3,686,420  3,686,433
-  CompressedImage (JPEG)     1,101,868  1,101,842  1,101,842  1,101,853
+  CompressedImage (JPEG)     1,102,387  1,102,361  1,102,361  1,102,372
   JointState (16 joints)           644        543        543        594
   → saved calib3d/bench_serdes_serialize.png
   → saved calib3d/bench_serdes_deserialize.png

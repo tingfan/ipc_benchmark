@@ -17,25 +17,26 @@ H, W, C = 960, 1280, 3
 N_WARMUP = 5
 N_ITERS = 200
 
-# Collect results for plotting: {(msg_type, backend): {"ser": µs, "deser": µs}}
+# Collect results for plotting: {(msg_type, backend): {"ser": [µs,...], "deser": [µs,...]}}
 RESULTS = {}
 
 
 def bench(name: str, fn, n_warmup=N_WARMUP, n_iters=N_ITERS):
     for _ in range(n_warmup):
         fn()
-    t0 = time.perf_counter()
+    timings = []
     for _ in range(n_iters):
+        t0 = time.perf_counter()
         fn()
-    elapsed = time.perf_counter() - t0
-    mean_us = elapsed / n_iters * 1e6
+        timings.append((time.perf_counter() - t0) * 1e6)
+    mean_us = sum(timings) / len(timings)
     print(f"  {name:.<50s} {mean_us:>9.1f} µs  ({n_iters} iters)")
-    return mean_us
+    return timings
 
 
-def record(msg_type: str, backend: str, ser_us: float, deser_us: float):
-    """Store a serdes result for later plotting."""
-    RESULTS[(msg_type, backend)] = {"ser": ser_us, "deser": deser_us}
+def record(msg_type: str, backend: str, ser_timings: list, deser_timings: list):
+    """Store per-iteration serdes timings for later plotting."""
+    RESULTS[(msg_type, backend)] = {"ser": ser_timings, "deser": deser_timings}
 
 
 def make_random_image():
@@ -594,41 +595,49 @@ def plot_serdes():
     import matplotlib.pyplot as plt
 
     msg_types = ["Image", "Compressed", "JointState"]
-    msg_labels = ["Raw Image\n(3.7 MB)", "CompressedImage\n(JPEG ~1.1 MB)", "JointState\n(16 joints)"]
+    msg_labels = ["Raw Image (3.7 MB)", "CompressedImage (JPEG ~1.1 MB)", "JointState (16 joints)"]
     backends = ["Cyclone", "cydr", "betterproto", "protobuf(C)", "LCM"]
     colors = ['#4C72B0', '#55A868', '#DD8452', '#C44E52', '#8172B3']
 
     for op, op_key in [("Serialize", "ser"), ("Deserialize", "deser")]:
         fig, axes = plt.subplots(1, 3, figsize=(14, 5))
-        fig.suptitle(f"{op} Latency (µs)", fontsize=14)
+        fig.suptitle(f"{op} Latency", fontsize=14)
 
         for ax, mt, ml in zip(axes, msg_types, msg_labels):
-            vals = []
+            data = []
             labels = []
             for b in backends:
                 key = (mt, b)
                 if key in RESULTS:
-                    vals.append(RESULTS[key][op_key])
+                    data.append(RESULTS[key][op_key])
                     labels.append(b)
 
-            bars = ax.bar(range(len(vals)), vals, color=colors[:len(vals)])
-            ax.set_xticks(range(len(vals)))
-            ax.set_xticklabels(labels, rotation=30, ha='right', fontsize=8)
+            if not data:
+                continue
+
+            bp = ax.boxplot(data, tick_labels=labels, patch_artist=True, showfliers=True,
+                            flierprops=dict(marker='.', markersize=2, alpha=0.4))
+            for patch, color in zip(bp['boxes'], colors[:len(data)]):
+                patch.set_facecolor(color)
+                patch.set_alpha(0.7)
+
+            # annotate medians
+            for i, d in enumerate(data):
+                med = np.median(d)
+                if med > 1000:
+                    label = f"{med/1000:.1f}ms"
+                elif med < 1:
+                    label = f"{med:.2f}µs"
+                else:
+                    label = f"{med:.1f}µs"
+                ax.annotate(label, xy=(i + 1, med),
+                            xytext=(8, 4), textcoords='offset points',
+                            fontsize=7, color='black')
+
             ax.set_title(ml, fontsize=10)
             ax.set_ylabel('µs')
+            ax.tick_params(axis='x', rotation=30, labelsize=8)
             ax.grid(axis='y', alpha=0.3)
-
-            # annotate values
-            for bar, v in zip(bars, vals):
-                if v > 1000:
-                    label = f"{v/1000:.1f}ms"
-                elif v < 1:
-                    label = f"{v:.2f}"
-                else:
-                    label = f"{v:.1f}"
-                ax.annotate(label, xy=(bar.get_x() + bar.get_width()/2, bar.get_height()),
-                            xytext=(0, 3), textcoords='offset points',
-                            ha='center', fontsize=7)
 
         fig.tight_layout()
         fname = f"bench_serdes_{op.lower()}.png"
