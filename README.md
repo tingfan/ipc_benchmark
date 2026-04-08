@@ -7,6 +7,7 @@ Benchmarks comparing serialization and IPC latency for ROS 2 message types using
 **Serialization only** (`bench_serdes.py`):
 - `ros2_pyterfaces` cyclone backend (CDR via Cyclone DDS Python)
 - `ros2_pyterfaces` cydr backend (CDR via cydr/msgspec)
+- Protobuf via [betterproto](https://github.com/danielgtaylor/python-betterproto) (pure Python protobuf)
 - LCM (hand-written struct-based encode/decode)
 - Message types: `Image` (1280×960×3), `CompressedImage` (JPEG), `JointState` (16 joints)
 
@@ -44,19 +45,19 @@ pixi run python bench_ipc.py
 
 ### Serialization (µs per call)
 
-| Message | Cyclone | cydr | LCM |
-|---|---|---|---|
-| Image serialize | 126,000 | 560 | 505 |
-| Image deserialize | 55,000 | 220 | 204 |
-| JointState serialize | 40 | 4.3 | 7.8 |
-| JointState deserialize | 39 | 6.4 | 7.9 |
+| Message | Cyclone | cydr | Protobuf | LCM |
+|---|---|---|---|---|
+| Image serialize | 126,000 | 562 | 529 | 522 |
+| Image deserialize | 55,000 | 214 | 441 | 203 |
+| JointState serialize | 40 | 4.3 | 109 | 7.8 |
+| JointState deserialize | 39 | 6.3 | 77 | 7.7 |
 
 ### IPC median latency (µs)
 
-| Message | cydr+zenoh | LCM |
-|---|---|---|
-| Image (3.7 MB) | 578 | 2,781 |
-| JointState (644 B) | 10.7 | 21.3 |
+| Message | cydr+zenoh | proto+zenoh | LCM |
+|---|---|---|---|
+| Image (3.7 MB) | 600 | 1,158 | 2,851 |
+| JointState (644 B) | 10.4 | 9.0 | 20.9 |
 
 ### IPC latency box plots
 
@@ -70,3 +71,4 @@ Managed by pixi. Key packages:
 - [ros2-pyterfaces](https://github.com/2lian/ros2-pyterfaces) — ROS 2 message serialization (cyclone + cydr backends)
 - [zenoh](https://zenoh.io/) — zero-overhead pub/sub transport
 - [lcm](https://github.com/lcm-proj/lcm) — Lightweight Communications and Marshalling
+- [betterproto](https://github.com/danielgtaylor/python-betterproto) — Pure Python Protobuf 3 code generation

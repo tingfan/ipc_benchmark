@@ -162,6 +162,128 @@ def bench_zenoh_cydr_joint(names, pos, vel, eff):
     return latencies
 
 
+# ── betterproto + zenoh ──────────────────────────────────────────────────────
+
+def _get_proto_types():
+    import betterproto
+    from dataclasses import dataclass
+
+    @dataclass
+    class ProtoImage(betterproto.Message):
+        height: int = betterproto.uint32_field(1)
+        width: int = betterproto.uint32_field(2)
+        encoding: str = betterproto.string_field(3)
+        is_bigendian: int = betterproto.uint32_field(4)
+        step: int = betterproto.uint32_field(5)
+        data: bytes = betterproto.bytes_field(6)
+
+    @dataclass
+    class ProtoJointState(betterproto.Message):
+        name: list[str] = betterproto.string_field(1)
+        position: list[float] = betterproto.double_field(2)
+        velocity: list[float] = betterproto.double_field(3)
+        effort: list[float] = betterproto.double_field(4)
+
+    return ProtoImage, ProtoJointState
+
+
+def bench_zenoh_proto_image(img_flat):
+    import zenoh
+    ProtoImage, _ = _get_proto_types()
+
+    print("\n=== protobuf + zenoh: raw Image ===")
+
+    msg = ProtoImage(
+        height=H, width=W, encoding="bgr8",
+        is_bigendian=0, step=W * C,
+        data=bytes(img_flat),
+    )
+
+    latencies = []
+    received = threading.Event()
+    count = [0]
+
+    def on_sample(sample):
+        t_recv = time.monotonic_ns()
+        payload = bytes(sample.payload)
+        t_send = unstamp_bytes(payload)
+        _ = ProtoImage().parse(payload[8:])
+        count[0] += 1
+        if count[0] > N_WARMUP:
+            latencies.append(t_recv - t_send)
+        if count[0] >= N_WARMUP + N_MSGS:
+            received.set()
+
+    cfg = zenoh.Config()
+    session = zenoh.open(cfg)
+    sub = session.declare_subscriber("bench/proto_image", on_sample)
+
+    time.sleep(0.3)
+
+    blob = bytes(msg)
+    for _ in range(N_WARMUP + N_MSGS):
+        payload = stamp_bytes() + blob
+        session.put("bench/proto_image", payload)
+        time.sleep(0.001)
+
+    received.wait(timeout=10)
+    sub.undeclare()
+    time.sleep(0.1)
+    session.close()
+
+    if latencies:
+        report(f"end-to-end ({len(latencies)} msgs, {len(blob):,} bytes)", latencies)
+    else:
+        print("  ⚠ no messages received")
+    return latencies
+
+
+def bench_zenoh_proto_joint(names, pos, vel, eff):
+    import zenoh
+    _, ProtoJointState = _get_proto_types()
+
+    print("\n=== protobuf + zenoh: JointState ===")
+
+    msg = ProtoJointState(name=names, position=pos, velocity=vel, effort=eff)
+
+    latencies = []
+    received = threading.Event()
+    count = [0]
+
+    def on_sample(sample):
+        t_recv = time.monotonic_ns()
+        payload = bytes(sample.payload)
+        t_send = unstamp_bytes(payload)
+        _ = ProtoJointState().parse(payload[8:])
+        count[0] += 1
+        if count[0] > N_WARMUP:
+            latencies.append(t_recv - t_send)
+        if count[0] >= N_WARMUP + N_MSGS:
+            received.set()
+
+    cfg = zenoh.Config()
+    session = zenoh.open(cfg)
+    sub = session.declare_subscriber("bench/proto_joint", on_sample)
+
+    time.sleep(0.3)
+
+    blob = bytes(msg)
+    for _ in range(N_WARMUP + N_MSGS):
+        payload = stamp_bytes() + blob
+        session.put("bench/proto_joint", payload)
+        time.sleep(0.0002)
+
+    received.wait(timeout=10)
+    sub.undeclare()
+    session.close()
+
+    if latencies:
+        report(f"end-to-end ({len(latencies)} msgs, {len(blob):,} bytes)", latencies)
+    else:
+        print("  ⚠ no messages received")
+    return latencies
+
+
 # ── LCM ──────────────────────────────────────────────────────────────────────
 
 def bench_lcm_image(img_flat):
@@ -323,21 +445,23 @@ def main():
 
     # Image benchmarks
     z_img = bench_zenoh_cydr_image(img_flat)
+    p_img = bench_zenoh_proto_image(img_flat)
     l_img = bench_lcm_image(img_flat)
 
     # JointState benchmarks
     z_js = bench_zenoh_cydr_joint(names, pos, vel, eff)
+    p_js = bench_zenoh_proto_joint(names, pos, vel, eff)
     l_js = bench_lcm_joint(names, pos, vel, eff)
 
     # Box plots
     print("\n=== Generating plots ===")
     plot_results(
-        {"cydr+zenoh": z_img, "LCM": l_img},
+        {"cydr+zenoh": z_img, "proto+zenoh": p_img, "LCM": l_img},
         f"IPC Latency: Raw Image ({W}×{H}×{C})",
         "bench_ipc_image.png",
     )
     plot_results(
-        {"cydr+zenoh": z_js, "LCM": l_js},
+        {"cydr+zenoh": z_js, "proto+zenoh": p_js, "LCM": l_js},
         f"IPC Latency: JointState ({N_JOINTS} joints)",
         "bench_ipc_joint.png",
     )

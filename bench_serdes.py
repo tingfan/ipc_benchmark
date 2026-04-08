@@ -138,6 +138,79 @@ def bench_cydr(img_flat: np.ndarray, jpeg_bytes: bytes):
     print("  ✓ roundtrip correctness verified")
 
 
+# ── Protobuf (betterproto) ───────────────────────────────────────────────────
+
+def _get_proto_types():
+    """Define protobuf message types via betterproto (no .proto file needed)."""
+    import betterproto
+    from dataclasses import dataclass, field as dc_field
+
+    @dataclass
+    class ProtoImage(betterproto.Message):
+        height: int = betterproto.uint32_field(1)
+        width: int = betterproto.uint32_field(2)
+        encoding: str = betterproto.string_field(3)
+        is_bigendian: int = betterproto.uint32_field(4)
+        step: int = betterproto.uint32_field(5)
+        data: bytes = betterproto.bytes_field(6)
+
+    @dataclass
+    class ProtoJointState(betterproto.Message):
+        name: list[str] = betterproto.string_field(1)
+        position: list[float] = betterproto.double_field(2)
+        velocity: list[float] = betterproto.double_field(3)
+        effort: list[float] = betterproto.double_field(4)
+
+    return ProtoImage, ProtoJointState
+
+
+def bench_proto_image(img_flat: np.ndarray):
+    ProtoImage, _ = _get_proto_types()
+
+    print("\n=== Protobuf/betterproto (raw Image) ===")
+    msg = ProtoImage(
+        height=H, width=W, encoding="bgr8",
+        is_bigendian=0, step=W * C,
+        data=bytes(img_flat),
+    )
+    blob = bytes(msg)
+    print(f"  blob size: {len(blob):,} bytes")
+
+    def ser():
+        bytes(msg)
+    def deser():
+        ProtoImage().parse(blob)
+
+    bench("serialize   (raw Image)", ser)
+    bench("deserialize (raw Image)", deser)
+
+    rt = ProtoImage().parse(blob)
+    assert rt.height == H and rt.width == W and rt.encoding == "bgr8"
+    assert rt.data == bytes(img_flat), "protobuf raw Image roundtrip MISMATCH"
+    print("  ✓ roundtrip correctness verified")
+
+
+def bench_proto_jointstate(names, pos, vel, eff):
+    _, ProtoJointState = _get_proto_types()
+
+    print("\n=== Protobuf/betterproto (JointState) ===")
+    msg = ProtoJointState(name=names, position=pos, velocity=vel, effort=eff)
+    blob = bytes(msg)
+    print(f"  blob size: {len(blob):,} bytes")
+
+    def ser():
+        bytes(msg)
+    def deser():
+        ProtoJointState().parse(blob)
+
+    bench("serialize   (JointState)", ser)
+    bench("deserialize (JointState)", deser)
+
+    rt = ProtoJointState().parse(blob)
+    assert rt.name == names and rt.position == pos
+    print("  ✓ roundtrip correctness verified")
+
+
 # ── LCM ───────────────────────────────────────────────────────────────────────
 
 def bench_lcm_image(img_flat: np.ndarray):
@@ -203,6 +276,7 @@ def main():
 
     bench_cyclone(img_flat, jpeg_bytes)
     bench_cydr(img_flat, jpeg_bytes)
+    bench_proto_image(img_flat)
     bench_lcm_image(img_flat)
 
     # cross-backend: verify cyclone and cydr produce identical blobs
@@ -290,6 +364,9 @@ def bench_jointstate():
 
     # ── LCM JointState
     bench_lcm_jointstate(names, pos, vel, eff)
+
+    # ── Protobuf JointState
+    bench_proto_jointstate(names, pos, vel, eff)
 
 
 if __name__ == "__main__":
