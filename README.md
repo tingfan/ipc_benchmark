@@ -1,24 +1,25 @@
-# IPC Benchmark: cydr+zenoh vs LCM
+# IPC Benchmark: CDR vs Protobuf vs LCM
 
-Benchmarks comparing serialization and IPC latency for ROS 2 message types using different backends.
+Benchmarks comparing serialization performance and IPC latency for robotics message types across five serialization backends and two transport layers.
 
 ## What's tested
 
 **Serialization only** (`bench_serdes.py`):
 - `ros2_pyterfaces` cyclone backend (CDR via Cyclone DDS Python)
 - `ros2_pyterfaces` cydr backend (CDR via cydr/msgspec)
-- Protobuf via [betterproto](https://github.com/danielgtaylor/python-betterproto) (pure Python protobuf)
+- [betterproto](https://github.com/danielgtaylor/python-betterproto) (pure Python protobuf)
 - Google [protobuf](https://protobuf.dev/) with C/upb backend
-- LCM (hand-written struct-based encode/decode)
-- Message types: `Image` (1280×960×3), `CompressedImage` (JPEG), `JointState` (16 joints)
+- [LCM](https://github.com/lcm-proj/lcm) (struct-based encode/decode)
+- Message types: `Image` (1280×960×3 raw), `CompressedImage` (JPEG), `JointState` (16 joints)
+- Roundtrip correctness verified for all backends
 
 **End-to-end IPC** (`bench_ipc.py`):
-- cydr serialize → zenoh transport → cydr deserialize
-- betterproto serialize → zenoh transport → betterproto deserialize
-- Google protobuf(C) serialize → zenoh transport → protobuf(C) deserialize
-- LCM serialize → LCM UDP multicast → LCM deserialize
+- cydr + zenoh
+- betterproto + zenoh
+- Google protobuf(C) + zenoh
+- LCM (UDP multicast)
 - Measures single-process pub/sub latency with embedded timestamps
-- Generates box plots comparing the two stacks
+- Generates box plots comparing all four stacks
 
 ## Setup
 
@@ -48,12 +49,26 @@ pixi run python bench_ipc.py
 
 ### Serialization (µs per call)
 
-| Message | Cyclone | cydr | betterproto | protobuf(C) | LCM |
+**Raw Image (1280×960×3, 3.7 MB):**
+
+| | Cyclone | cydr | betterproto | protobuf(C) | LCM |
 |---|---|---|---|---|---|
-| Image serialize | 131,000 | 554 | 526 | 513 | 501 |
-| Image deserialize | 56,000 | 213 | 439 | 200 | 206 |
-| JointState serialize | 42 | 4.3 | 65 | 0.6 | 7.7 |
-| JointState deserialize | 39 | 6.3 | 82 | 1.1 | 7.7 |
+| serialize | 131,000 | 554 | 526 | 513 | 501 |
+| deserialize | 56,000 | 213 | 439 | 200 | 206 |
+
+**CompressedImage (JPEG, ~1.1 MB):**
+
+| | Cyclone | cydr | betterproto | protobuf(C) | LCM |
+|---|---|---|---|---|---|
+| serialize | 20,780 | 69 | 126 | 115 | ~500 |
+| deserialize | 8,540 | 53 | 137 | 48 | ~200 |
+
+**JointState (16 joints):**
+
+| | Cyclone | cydr | betterproto | protobuf(C) | LCM |
+|---|---|---|---|---|---|
+| serialize | 42 | 4.3 | 65 | 0.6 | 7.7 |
+| deserialize | 39 | 6.3 | 82 | 1.1 | 7.7 |
 
 ### Payload sizes (bytes)
 
@@ -82,5 +97,5 @@ Managed by pixi. Key packages:
 - [ros2-pyterfaces](https://github.com/2lian/ros2-pyterfaces) — ROS 2 message serialization (cyclone + cydr backends)
 - [zenoh](https://zenoh.io/) — zero-overhead pub/sub transport
 - [lcm](https://github.com/lcm-proj/lcm) — Lightweight Communications and Marshalling
-- [betterproto](https://github.com/danielgtaylor/python-betterproto) — Pure Python Protobuf 3 code generation
+- [betterproto](https://github.com/danielgtaylor/python-betterproto) — pure Python Protobuf 3
 - [protobuf](https://protobuf.dev/) — Google Protocol Buffers with C/upb backend
