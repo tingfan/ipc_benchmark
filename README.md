@@ -60,7 +60,7 @@ pixi run python bench_ipc.py
 | Message | CDR | Protobuf | LCM |
 |---|---|---|---|
 | raw Image | 3,686,448 | 3,686,420 | 3,686,433 |
-| CompressedImage (JPEG) | 1,102,687 | n/a | n/a |
+| CompressedImage (JPEG) | 1,101,772 | 1,101,746 | 1,101,757 |
 | JointState (16 joints) | 644 | 543 | 594 |
 
 ### IPC median latency (µs)
