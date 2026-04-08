@@ -1,0 +1,5 @@
+.pixi/
+pixi.lock
+__pycache__/
+*.pyc
+*.png
