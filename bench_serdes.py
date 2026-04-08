@@ -161,11 +161,16 @@ def _get_proto_types():
         velocity: list[float] = betterproto.double_field(3)
         effort: list[float] = betterproto.double_field(4)
 
-    return ProtoImage, ProtoJointState
+    @dataclass
+    class ProtoCompressedImage(betterproto.Message):
+        format: str = betterproto.string_field(1)
+        data: bytes = betterproto.bytes_field(2)
+
+    return ProtoImage, ProtoJointState, ProtoCompressedImage
 
 
-def bench_proto_image(img_flat: np.ndarray):
-    ProtoImage, _ = _get_proto_types()
+def bench_proto_image(img_flat: np.ndarray, jpeg_bytes: bytes):
+    ProtoImage, _, ProtoCompressedImage = _get_proto_types()
 
     print("\n=== Protobuf/betterproto (raw Image) ===")
     msg = ProtoImage(
@@ -189,9 +194,26 @@ def bench_proto_image(img_flat: np.ndarray):
     assert rt.data == bytes(img_flat), "protobuf raw Image roundtrip MISMATCH"
     print("  ✓ roundtrip correctness verified")
 
+    # CompressedImage
+    cmsg = ProtoCompressedImage(format="jpeg", data=jpeg_bytes)
+    cblob = bytes(cmsg)
+    print(f"  CompressedImage blob size: {len(cblob):,} bytes")
+
+    def ser_comp():
+        bytes(cmsg)
+    def deser_comp():
+        ProtoCompressedImage().parse(cblob)
+
+    bench("serialize   (CompressedImage)", ser_comp)
+    bench("deserialize (CompressedImage)", deser_comp)
+
+    crt = ProtoCompressedImage().parse(cblob)
+    assert crt.data == jpeg_bytes, "betterproto CompressedImage roundtrip MISMATCH"
+    print("  ✓ CompressedImage roundtrip verified")
+
 
 def bench_proto_jointstate(names, pos, vel, eff):
-    _, ProtoJointState = _get_proto_types()
+    _, ProtoJointState, _ = _get_proto_types()
 
     print("\n=== Protobuf/betterproto (JointState) ===")
     msg = ProtoJointState(name=names, position=pos, velocity=vel, effort=eff)
@@ -213,10 +235,10 @@ def bench_proto_jointstate(names, pos, vel, eff):
 
 # ── Google Protobuf (C/upb backend) ──────────────────────────────────────────
 
-def bench_google_proto_image(img_flat: np.ndarray):
+def bench_google_proto_image(img_flat: np.ndarray, jpeg_bytes: bytes):
     import sys
     pass  # bench_msgs_pb2 is in same directory
-    from bench_msgs_pb2 import Image
+    from bench_msgs_pb2 import Image, CompressedImage
 
     print("\n=== Google protobuf/upb (raw Image) ===")
     msg = Image(height=H, width=W, encoding="bgr8", is_bigendian=0, step=W * C, data=bytes(img_flat))
@@ -237,6 +259,25 @@ def bench_google_proto_image(img_flat: np.ndarray):
     assert rt.height == H and rt.width == W and rt.encoding == "bgr8"
     assert rt.data == bytes(img_flat), "google protobuf raw Image roundtrip MISMATCH"
     print("  ✓ roundtrip correctness verified")
+
+    # CompressedImage
+    cmsg = CompressedImage(format="jpeg", data=jpeg_bytes)
+    cblob = cmsg.SerializeToString()
+    print(f"  CompressedImage blob size: {len(cblob):,} bytes")
+
+    def ser_comp():
+        cmsg.SerializeToString()
+    def deser_comp():
+        m = CompressedImage()
+        m.ParseFromString(cblob)
+
+    bench("serialize   (CompressedImage)", ser_comp)
+    bench("deserialize (CompressedImage)", deser_comp)
+
+    crt = CompressedImage()
+    crt.ParseFromString(cblob)
+    assert crt.data == jpeg_bytes, "google protobuf CompressedImage roundtrip MISMATCH"
+    print("  ✓ CompressedImage roundtrip verified")
 
 
 def bench_google_proto_jointstate(names, pos, vel, eff):
@@ -329,8 +370,8 @@ def main():
 
     bench_cyclone(img_flat, jpeg_bytes)
     bench_cydr(img_flat, jpeg_bytes)
-    bench_proto_image(img_flat)
-    bench_google_proto_image(img_flat)
+    bench_proto_image(img_flat, jpeg_bytes)
+    bench_google_proto_image(img_flat, jpeg_bytes)
     bench_lcm_image(img_flat)
 
     # cross-backend: verify cyclone and cydr produce identical blobs
@@ -449,7 +490,7 @@ def print_payload_sizes(img_flat, jpeg_bytes, names, pos, vel, eff):
     from lcm_types import LcmImage, LcmJointState
     from bench_msgs_pb2 import Image as PbImage, JointState as PbJS
 
-    ProtoImage, ProtoJointState = _get_proto_types()
+    ProtoImage, ProtoJointState, ProtoCompressedImage = _get_proto_types()
 
     # Image sizes
     cyc_img = CycloneImage(height=H, width=W, encoding="bgr8", is_bigendian=0, step=W*C, data=img_flat.tolist())
@@ -482,7 +523,10 @@ def print_payload_sizes(img_flat, jpeg_bytes, names, pos, vel, eff):
     print(f"  {'Message':<25s} {'CDR':>10s} {'Protobuf':>10s} {'Proto(C)':>10s} {'LCM':>10s}")
     print(f"  {'-'*25} {'-'*10} {'-'*10} {'-'*10} {'-'*10}")
     print(f"  {'raw Image':<25s} {len(cyc_img.serialize()):>10,} {len(bytes(bp_img)):>10,} {len(gpb_img.SerializeToString()):>10,} {len(lcm_img.encode()):>10,}")
-    print(f"  {'CompressedImage (JPEG)':<25s} {len(cyc_comp.serialize()):>10,} {'n/a':>10s} {'n/a':>10s} {'n/a':>10s}")
+    bp_comp = ProtoCompressedImage(format="jpeg", data=jpeg_bytes)
+    from bench_msgs_pb2 import CompressedImage as PbComp
+    gpb_comp = PbComp(format="jpeg", data=jpeg_bytes)
+    print(f"  {'CompressedImage (JPEG)':<25s} {len(cyc_comp.serialize()):>10,} {len(bytes(bp_comp)):>10,} {len(gpb_comp.SerializeToString()):>10,} {'n/a':>10s}")
     print(f"  {'JointState (16 joints)':<25s} {len(cyc_js.serialize()):>10,} {len(bytes(bp_js)):>10,} {len(gpb_js.SerializeToString()):>10,} {len(lcm_js.encode()):>10,}")
 
 

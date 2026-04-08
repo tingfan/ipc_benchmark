@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10\x62\x65nch_msgs.proto\x12\x05\x62\x65nch\"j\n\x05Image\x12\x0e\n\x06height\x18\x01 \x01(\r\x12\r\n\x05width\x18\x02 \x01(\r\x12\x10\n\x08\x65ncoding\x18\x03 \x01(\t\x12\x14\n\x0cis_bigendian\x18\x04 \x01(\r\x12\x0c\n\x04step\x18\x05 \x01(\r\x12\x0c\n\x04\x64\x61ta\x18\x06 \x01(\x0c\"N\n\nJointState\x12\x0c\n\x04name\x18\x01 \x03(\t\x12\x10\n\x08position\x18\x02 \x03(\x01\x12\x10\n\x08velocity\x18\x03 \x03(\x01\x12\x0e\n\x06\x65\x66\x66ort\x18\x04 \x03(\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10\x62\x65nch_msgs.proto\x12\x05\x62\x65nch\"j\n\x05Image\x12\x0e\n\x06height\x18\x01 \x01(\r\x12\r\n\x05width\x18\x02 \x01(\r\x12\x10\n\x08\x65ncoding\x18\x03 \x01(\t\x12\x14\n\x0cis_bigendian\x18\x04 \x01(\r\x12\x0c\n\x04step\x18\x05 \x01(\r\x12\x0c\n\x04\x64\x61ta\x18\x06 \x01(\x0c\"/\n\x0f\x43ompressedImage\x12\x0e\n\x06\x66ormat\x18\x01 \x01(\t\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\x0c\"N\n\nJointState\x12\x0c\n\x04name\x18\x01 \x03(\t\x12\x10\n\x08position\x18\x02 \x03(\x01\x12\x10\n\x08velocity\x18\x03 \x03(\x01\x12\x0e\n\x06\x65\x66\x66ort\x18\x04 \x03(\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -33,6 +33,8 @@ if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_IMAGE']._serialized_start=27
   _globals['_IMAGE']._serialized_end=133
-  _globals['_JOINTSTATE']._serialized_start=135
-  _globals['_JOINTSTATE']._serialized_end=213
+  _globals['_COMPRESSEDIMAGE']._serialized_start=135
+  _globals['_COMPRESSEDIMAGE']._serialized_end=182
+  _globals['_JOINTSTATE']._serialized_start=184
+  _globals['_JOINTSTATE']._serialized_end=262
 # @@protoc_insertion_point(module_scope)

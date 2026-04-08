@@ -11,6 +11,11 @@ message Image {
   bytes data = 6;
 }
 
+message CompressedImage {
+  string format = 1;
+  bytes data = 2;
+}
+
 message JointState {
   repeated string name = 1;
   repeated double position = 2;
