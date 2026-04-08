@@ -153,6 +153,7 @@ def bench_zenoh_cydr_joint(names, pos, vel, eff):
 
     received.wait(timeout=10)
     sub.undeclare()
+    time.sleep(0.1)
     session.close()
 
     if latencies:
@@ -275,6 +276,7 @@ def bench_zenoh_proto_joint(names, pos, vel, eff):
 
     received.wait(timeout=10)
     sub.undeclare()
+    time.sleep(0.1)
     session.close()
 
     if latencies:
@@ -374,6 +376,7 @@ def bench_zenoh_gpb_joint(names, pos, vel, eff):
 
     received.wait(timeout=10)
     sub.undeclare()
+    time.sleep(0.1)
     session.close()
 
     if latencies:

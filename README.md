@@ -63,37 +63,37 @@ pixi run python bench_ipc.py
 
 | | Cyclone | cydr | betterproto | protobuf(C) | LCM |
 |---|---|---|---|---|---|
-| serialize | 128,665 | 575 | 569 | 561 | 551 |
-| deserialize | 56,685 | 243 | 503 | 237 | 235 |
+| serialize | 128,466 | 564 | 535 | 515 | 526 |
+| deserialize | 56,357 | 215 | 440 | 203 | 225 |
 
 **CompressedImage (JPEG, ~1.1 MB):**
 
 | | Cyclone | cydr | betterproto | protobuf(C) | LCM |
 |---|---|---|---|---|---|
-| serialize | 20,645 | 75 | 131 | 117 | 131 |
-| deserialize | 8,514 | 54 | 139 | 47 | 49 |
+| serialize | 20,678 | 75 | 127 | 124 | 142 |
+| deserialize | 8,467 | 53 | 133 | 50 | 59 |
 
 **JointState (16 joints):**
 
 | | Cyclone | cydr | betterproto | protobuf(C) | LCM |
 |---|---|---|---|---|---|
-| serialize | 42 | 2.7 | 106 | 0.6 | 7.8 |
-| deserialize | 38 | 4.5 | 84 | 1.1 | 9.3 |
+| serialize | 42 | 2.3 | 113 | 0.6 | 6.9 |
+| deserialize | 39 | 3.4 | 88 | 1.1 | 8.1 |
 
 ### Payload sizes (bytes)
 
 | Message | CDR | Protobuf | LCM |
 |---|---|---|---|
 | raw Image | 3,686,448 | 3,686,420 | 3,686,433 |
-| CompressedImage (JPEG) | 1,102,384 | 1,102,358 | 1,102,369 |
+| CompressedImage (JPEG) | 1,102,468 | 1,102,442 | 1,102,453 |
 | JointState (16 joints) | 644 | 543 | 594 |
 
 ### IPC median latency (µs)
 
 | Message | cydr+zenoh | betterproto+zenoh | protobuf(C)+zenoh | LCM |
 |---|---|---|---|---|
-| Image (3.7 MB) | 587 | 1,658 | 598 | 3,063 |
-| JointState (644 B) | 10.5 | 11.1 | 10.2 | 20.2 |
+| Image (3.7 MB) | 574 | 1,208 | 589 | 3,050 |
+| JointState (644 B) | 11.3 | 9.6 | 10.0 | 22.1 |
 
 ### IPC latency box plots
 
