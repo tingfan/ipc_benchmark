@@ -17,3 +17,4 @@ eclipse-zenoh = ">=1.8.0,<2"
 ros2-pyterfaces = { version = ">=0.2.0, <0.3", extras = ["cyclone", "cydr"] }
 lcm = ">=1.5.0"
 betterproto = ">=1.2.5, <2"
+protobuf = ">=7.34.1, <8"
