@@ -521,6 +521,110 @@ def bench_lcm_joint(names, pos, vel, eff):
     return latencies
 
 
+# ── msgpack + zenoh ───────────────────────────────────────────────────────────
+
+def bench_zenoh_msgpack_image(img_flat):
+    import zenoh
+    import msgpack
+
+    print("\n=== msgpack + zenoh: raw Image ===")
+
+    img_bytes = bytes(img_flat)
+    msg = {
+        b"height": H, b"width": W, b"encoding": b"bgr8",
+        b"is_bigendian": 0, b"step": W * C, b"data": img_bytes,
+    }
+
+    latencies = []
+    received = threading.Event()
+    count = [0]
+
+    def on_sample(sample):
+        t_recv = time.monotonic_ns()
+        payload = bytes(sample.payload)
+        t_send = unstamp_bytes(payload)
+        _ = msgpack.unpackb(payload[8:], raw=False)
+        count[0] += 1
+        if count[0] > N_WARMUP:
+            latencies.append(t_recv - t_send)
+        if count[0] >= N_WARMUP + N_MSGS:
+            received.set()
+
+    cfg = zenoh.Config()
+    session = zenoh.open(cfg)
+    sub = session.declare_subscriber("bench/mp_image", on_sample)
+    time.sleep(0.3)
+
+    blob = msgpack.packb(msg, use_bin_type=True)
+    for _ in range(N_WARMUP + N_MSGS):
+        payload = stamp_bytes() + blob
+        session.put("bench/mp_image", payload)
+        time.sleep(0.001)
+
+    received.wait(timeout=10)
+    sub.undeclare()
+    time.sleep(0.5)
+    try:
+        session.close()
+    except Exception:
+        pass
+
+    if latencies:
+        report(f"end-to-end ({len(latencies)} msgs, {len(blob):,} bytes)", latencies)
+    else:
+        print("  ⚠ no messages received")
+    return latencies
+
+
+def bench_zenoh_msgpack_joint(names, pos, vel, eff):
+    import zenoh
+    import msgpack
+
+    print("\n=== msgpack + zenoh: JointState ===")
+
+    msg = {b"name": names, b"position": pos, b"velocity": vel, b"effort": eff}
+
+    latencies = []
+    received = threading.Event()
+    count = [0]
+
+    def on_sample(sample):
+        t_recv = time.monotonic_ns()
+        payload = bytes(sample.payload)
+        t_send = unstamp_bytes(payload)
+        _ = msgpack.unpackb(payload[8:], raw=False)
+        count[0] += 1
+        if count[0] > N_WARMUP:
+            latencies.append(t_recv - t_send)
+        if count[0] >= N_WARMUP + N_MSGS:
+            received.set()
+
+    cfg = zenoh.Config()
+    session = zenoh.open(cfg)
+    sub = session.declare_subscriber("bench/mp_joint", on_sample)
+    time.sleep(0.3)
+
+    blob = msgpack.packb(msg, use_bin_type=True)
+    for _ in range(N_WARMUP + N_MSGS):
+        payload = stamp_bytes() + blob
+        session.put("bench/mp_joint", payload)
+        time.sleep(0.0002)
+
+    received.wait(timeout=10)
+    sub.undeclare()
+    time.sleep(0.5)
+    try:
+        session.close()
+    except Exception:
+        pass
+
+    if latencies:
+        report(f"end-to-end ({len(latencies)} msgs, {len(blob):,} bytes)", latencies)
+    else:
+        print("  ⚠ no messages received")
+    return latencies
+
+
 # ── eCAL + protobuf(C) ────────────────────────────────────────────────────────
 
 def _ecal_init():
@@ -637,7 +741,7 @@ def plot_results(results: dict, title: str, filename: str):
     bp = ax.boxplot(data, tick_labels=labels, patch_artist=True, showfliers=True,
                     flierprops=dict(marker='.', markersize=3, alpha=0.5))
 
-    colors = ['#4C72B0', '#DD8452', '#55A868', '#C44E52', '#8172B3']
+    colors = ['#4C72B0', '#DD8452', '#55A868', '#937860', '#C44E52', '#8172B3']
     for patch, color in zip(bp['boxes'], colors):
         patch.set_facecolor(color)
         patch.set_alpha(0.7)
@@ -660,9 +764,35 @@ def plot_results(results: dict, title: str, filename: str):
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--suffix", default="",
+                        help="Suffix for output filenames, e.g. 'default_sysctl' or 'tuned_sysctl'")
+    args = parser.parse_args()
+
+    # Detect current UDP buffer settings
+    try:
+        with open("/proc/sys/net/core/rmem_max") as f:
+            rmem_max = int(f.read().strip())
+        with open("/proc/sys/net/core/rmem_default") as f:
+            rmem_default = int(f.read().strip())
+    except Exception:
+        rmem_max = rmem_default = -1
+
+    suffix = args.suffix
+    if not suffix:
+        if rmem_max >= 20_000_000:
+            suffix = "tuned_sysctl"
+        else:
+            suffix = "default_sysctl"
+
+    sysctl_label = f"rmem_max={rmem_max // 1024}K, rmem_default={rmem_default // 1024}K"
+
     print(f"IPC Benchmark: serialize + transport + deserialize")
     print(f"Image: {W}x{H}x{C} = {W*H*C:,} bytes | JointState: {N_JOINTS} joints")
     print(f"Warmup: {N_WARMUP} msgs, Measured: {N_MSGS} msgs")
+    print(f"UDP buffer: {sysctl_label}")
+    print(f"Output suffix: {suffix}")
 
     img_flat = make_image_data()
     names, pos, vel, eff = make_joint_data()
@@ -671,6 +801,7 @@ def main():
     z_img = bench_zenoh_cydr_image(img_flat)
     p_img = bench_zenoh_proto_image(img_flat)
     g_img = bench_zenoh_gpb_image(img_flat)
+    m_img = bench_zenoh_msgpack_image(img_flat)
     l_img = bench_lcm_image(img_flat)
     e_img = bench_ecal_gpb_image(img_flat)
 
@@ -678,22 +809,137 @@ def main():
     z_js = bench_zenoh_cydr_joint(names, pos, vel, eff)
     p_js = bench_zenoh_proto_joint(names, pos, vel, eff)
     g_js = bench_zenoh_gpb_joint(names, pos, vel, eff)
+    m_js = bench_zenoh_msgpack_joint(names, pos, vel, eff)
     l_js = bench_lcm_joint(names, pos, vel, eff)
     e_js = bench_ecal_gpb_joint(names, pos, vel, eff)
 
     # Box plots
     print("\n=== Generating plots ===")
+    img_results = {
+        "cydr\n+zenoh": z_img, "betterproto\n+zenoh": p_img,
+        "protobuf(C)\n+zenoh": g_img, "msgpack\n+zenoh": m_img,
+        "LCM": l_img, "protobuf(C)\n+eCAL": e_img,
+    }
+    js_results = {
+        "cydr\n+zenoh": z_js, "betterproto\n+zenoh": p_js,
+        "protobuf(C)\n+zenoh": g_js, "msgpack\n+zenoh": m_js,
+        "LCM": l_js, "protobuf(C)\n+eCAL": e_js,
+    }
+
     plot_results(
-        {"cydr+zenoh": z_img, "betterproto\n+zenoh": p_img, "protobuf(C)\n+zenoh": g_img, "LCM": l_img, "protobuf(C)\n+eCAL": e_img},
-        f"IPC Latency: Raw Image ({W}×{H}×{C})",
-        "bench_ipc_image.png",
+        img_results,
+        f"IPC Latency: Raw Image ({W}×{H}×{C})  [{sysctl_label}]",
+        f"bench_ipc_image_{suffix}.png",
     )
     plot_results(
-        {"cydr+zenoh": z_js, "betterproto\n+zenoh": p_js, "protobuf(C)\n+zenoh": g_js, "LCM": l_js, "protobuf(C)\n+eCAL": e_js},
-        f"IPC Latency: JointState ({N_JOINTS} joints)",
-        "bench_ipc_joint.png",
+        js_results,
+        f"IPC Latency: JointState ({N_JOINTS} joints)  [{sysctl_label}]",
+        f"bench_ipc_joint_{suffix}.png",
     )
+
+    # Save raw latency data for combined plotting later
+    import json
+    data_file = f"bench_ipc_data_{suffix}.json"
+    save_data = {
+        "suffix": suffix,
+        "sysctl_label": sysctl_label,
+        "image": {k.replace("\n", " "): v for k, v in img_results.items()},
+        "joint": {k.replace("\n", " "): v for k, v in js_results.items()},
+    }
+    with open(data_file, "w") as f:
+        json.dump(save_data, f)
+    print(f"  → saved {data_file}")
+
+    # Also save the canonical names (latest run)
+    import shutil
+    shutil.copy(f"bench_ipc_image_{suffix}.png", "bench_ipc_image.png")
+    shutil.copy(f"bench_ipc_joint_{suffix}.png", "bench_ipc_joint.png")
+    print(f"  → also copied to bench_ipc_image.png, bench_ipc_joint.png")
+
+
+def plot_combined():
+    """Load saved JSON data from both sysctl runs and produce a 2×2 figure."""
+    import json
+    import matplotlib.pyplot as plt
+
+    suffixes = ["default_sysctl", "tuned_sysctl"]
+    row_labels = ["Default sysctl (rmem 208 KB)", "Tuned sysctl (rmem 20 MB)"]
+    col_keys = ["image", "joint"]
+    col_titles = [
+        f"Raw Image ({W}×{H}×{C})",
+        f"JointState ({N_JOINTS} joints)",
+    ]
+    colors = ['#4C72B0', '#DD8452', '#55A868', '#937860', '#C44E52', '#8172B3']
+
+    runs = {}
+    for s in suffixes:
+        path = f"bench_ipc_data_{s}.json"
+        with open(path) as f:
+            runs[s] = json.load(f)
+
+    fig, axes = plt.subplots(2, 2, figsize=(16, 10))
+
+    # First pass: collect y-range per column so both rows share the same scale
+    col_ymax = [0.0, 0.0]
+    for row, sfx in enumerate(suffixes):
+        for col, ck in enumerate(col_keys):
+            for lat_ns in runs[sfx][ck].values():
+                if lat_ns:
+                    arr = np.array(lat_ns) / 1e3
+                    # Use 95th percentile × 1.15 for y-limit (ignore extreme outliers)
+                    col_ymax[col] = max(col_ymax[col], np.percentile(arr, 95) * 1.15)
+
+    # Second pass: plot
+    for row, (sfx, row_label) in enumerate(zip(suffixes, row_labels)):
+        for col, (ck, ct) in enumerate(zip(col_keys, col_titles)):
+            ax = axes[row][col]
+            results = runs[sfx][ck]
+
+            labels = []
+            data = []
+            for label, lat_ns in results.items():
+                if lat_ns:
+                    labels.append(label.replace(" ", "\n"))
+                    data.append(np.array(lat_ns) / 1e3)
+
+            if not data:
+                ax.set_visible(False)
+                continue
+
+            bp = ax.boxplot(data, tick_labels=labels, patch_artist=True,
+                            showfliers=True,
+                            flierprops=dict(marker='.', markersize=2, alpha=0.4))
+            for patch, color in zip(bp['boxes'], colors[:len(data)]):
+                patch.set_facecolor(color)
+                patch.set_alpha(0.7)
+
+            for i, d in enumerate(data):
+                med = np.median(d)
+                if med > 1000:
+                    lbl = f"{med/1000:.1f}ms"
+                else:
+                    lbl = f"{med:.0f}µs"
+                ax.annotate(lbl, xy=(i + 1, med),
+                            xytext=(8, 4), textcoords='offset points',
+                            fontsize=7, color='black')
+
+            ax.set_ylim(0, col_ymax[col])
+            ax.set_ylabel('Latency (µs)')
+            ax.set_title(f"{ct}\n{row_label}", fontsize=10)
+            ax.tick_params(axis='x', rotation=30, labelsize=7)
+            ax.grid(axis='y', alpha=0.3)
+
+    fig.suptitle("IPC Latency: Default vs Tuned sysctl UDP Buffer", fontsize=14, y=0.98)
+    fig.tight_layout(rect=[0, 0, 1, 0.96])
+    fname = "bench_ipc_combined.png"
+    fig.savefig(fname, dpi=150)
+    print(f"  → saved {fname}")
+    plt.close(fig)
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    if "--combine" in sys.argv:
+        plot_combined()
+    else:
+        main()

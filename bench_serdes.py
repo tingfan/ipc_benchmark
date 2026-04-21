@@ -407,6 +407,77 @@ def bench_lcm_jointstate(names, pos, vel, eff):
     print("  ✓ roundtrip correctness verified")
 
 
+# ── msgpack ────────────────────────────────────────────────────────────────────
+
+def bench_msgpack_image(img_flat: np.ndarray, jpeg_bytes: bytes):
+    import msgpack
+
+    print("\n=== msgpack (raw Image) ===")
+
+    img_bytes = bytes(img_flat)
+    msg = {
+        b"height": H, b"width": W, b"encoding": b"bgr8",
+        b"is_bigendian": 0, b"step": W * C, b"data": img_bytes,
+    }
+    blob = msgpack.packb(msg, use_bin_type=True)
+    print(f"  blob size: {len(blob):,} bytes")
+
+    def ser():
+        msgpack.packb(msg, use_bin_type=True)
+    def deser():
+        msgpack.unpackb(blob, raw=False)
+
+    s = bench("serialize   (raw Image)", ser)
+    d = bench("deserialize (raw Image)", deser)
+    record("Image", "msgpack", s, d)
+
+    rt = msgpack.unpackb(blob, raw=False)
+    assert rt[b"height"] == H and rt[b"width"] == W
+    assert rt[b"data"] == img_bytes, "msgpack raw Image roundtrip MISMATCH"
+    print("  ✓ roundtrip correctness verified")
+
+    # CompressedImage
+    cmsg = {b"format": b"jpeg", b"data": jpeg_bytes}
+    cblob = msgpack.packb(cmsg, use_bin_type=True)
+    print(f"  CompressedImage blob size: {len(cblob):,} bytes")
+
+    def ser_comp():
+        msgpack.packb(cmsg, use_bin_type=True)
+    def deser_comp():
+        msgpack.unpackb(cblob, raw=False)
+
+    s = bench("serialize   (CompressedImage)", ser_comp)
+    d = bench("deserialize (CompressedImage)", deser_comp)
+    record("Compressed", "msgpack", s, d)
+
+    crt = msgpack.unpackb(cblob, raw=False)
+    assert crt[b"data"] == jpeg_bytes, "msgpack CompressedImage roundtrip MISMATCH"
+    print("  ✓ CompressedImage roundtrip verified")
+
+
+def bench_msgpack_jointstate(names, pos, vel, eff):
+    import msgpack
+
+    print("\n=== msgpack (JointState) ===")
+
+    msg = {b"name": names, b"position": pos, b"velocity": vel, b"effort": eff}
+    blob = msgpack.packb(msg, use_bin_type=True)
+    print(f"  blob size: {len(blob):,} bytes")
+
+    def ser():
+        msgpack.packb(msg, use_bin_type=True)
+    def deser():
+        msgpack.unpackb(blob, raw=False)
+
+    s = bench("serialize   (JointState)", ser)
+    d = bench("deserialize (JointState)", deser)
+    record("JointState", "msgpack", s, d)
+
+    rt = msgpack.unpackb(blob, raw=False)
+    assert rt[b"name"] == names and rt[b"position"] == pos
+    print("  ✓ roundtrip correctness verified")
+
+
 # ── main ─────────────────────────────────────────────────────────────────────
 
 def main():
@@ -423,6 +494,7 @@ def main():
     bench_proto_image(img_flat, jpeg_bytes)
     bench_google_proto_image(img_flat, jpeg_bytes)
     bench_lcm_image(img_flat, jpeg_bytes)
+    bench_msgpack_image(img_flat, jpeg_bytes)
 
     # cross-backend: verify cyclone and cydr produce identical blobs
     print("\n=== Cross-backend check ===")
@@ -529,6 +601,9 @@ def bench_jointstate():
     # ── Google Protobuf JointState
     bench_google_proto_jointstate(names, pos, vel, eff)
 
+    # ── msgpack JointState
+    bench_msgpack_jointstate(names, pos, vel, eff)
+
 
 def print_payload_sizes(img_flat, jpeg_bytes, names, pos, vel, eff):
     import sys
@@ -581,14 +656,19 @@ def print_payload_sizes(img_flat, jpeg_bytes, names, pos, vel, eff):
     print(f"  Raw pixel data: {raw:,}")
     print(f"  JPEG data:      {len(jpeg_bytes):,}")
     print()
-    print(f"  {'Message':<25s} {'CDR':>10s} {'Protobuf':>10s} {'Proto(C)':>10s} {'LCM':>10s}")
-    print(f"  {'-'*25} {'-'*10} {'-'*10} {'-'*10} {'-'*10}")
-    print(f"  {'raw Image':<25s} {len(cyc_img.serialize()):>10,} {len(bytes(bp_img)):>10,} {len(gpb_img.SerializeToString()):>10,} {len(lcm_img.encode()):>10,}")
+    print(f"  {'Message':<25s} {'CDR':>10s} {'Protobuf':>10s} {'Proto(C)':>10s} {'LCM':>10s} {'msgpack':>10s}")
+    print(f"  {'-'*25} {'-'*10} {'-'*10} {'-'*10} {'-'*10} {'-'*10}")
+
+    import msgpack
+    mp_img = msgpack.packb({b"height": H, b"width": W, b"encoding": b"bgr8", b"is_bigendian": 0, b"step": W*C, b"data": bytes(img_flat)}, use_bin_type=True)
+    print(f"  {'raw Image':<25s} {len(cyc_img.serialize()):>10,} {len(bytes(bp_img)):>10,} {len(gpb_img.SerializeToString()):>10,} {len(lcm_img.encode()):>10,} {len(mp_img):>10,}")
     bp_comp = ProtoCompressedImage(format="jpeg", data=jpeg_bytes)
     from bench_msgs_pb2 import CompressedImage as PbComp
     gpb_comp = PbComp(format="jpeg", data=jpeg_bytes)
-    print(f"  {'CompressedImage (JPEG)':<25s} {len(cyc_comp.serialize()):>10,} {len(bytes(bp_comp)):>10,} {len(gpb_comp.SerializeToString()):>10,} {len(lcm_comp.encode()):>10,}")
-    print(f"  {'JointState (16 joints)':<25s} {len(cyc_js.serialize()):>10,} {len(bytes(bp_js)):>10,} {len(gpb_js.SerializeToString()):>10,} {len(lcm_js.encode()):>10,}")
+    mp_comp = msgpack.packb({b"format": b"jpeg", b"data": jpeg_bytes}, use_bin_type=True)
+    print(f"  {'CompressedImage (JPEG)':<25s} {len(cyc_comp.serialize()):>10,} {len(bytes(bp_comp)):>10,} {len(gpb_comp.SerializeToString()):>10,} {len(lcm_comp.encode()):>10,} {len(mp_comp):>10,}")
+    mp_js = msgpack.packb({b"name": names, b"position": pos, b"velocity": vel, b"effort": eff}, use_bin_type=True)
+    print(f"  {'JointState (16 joints)':<25s} {len(cyc_js.serialize()):>10,} {len(bytes(bp_js)):>10,} {len(gpb_js.SerializeToString()):>10,} {len(lcm_js.encode()):>10,} {len(mp_js):>10,}")
 
 
 def plot_serdes():
@@ -596,8 +676,8 @@ def plot_serdes():
 
     msg_types = ["Image", "Compressed", "JointState"]
     msg_labels = ["Raw Image (3.7 MB)", "CompressedImage (JPEG ~1.1 MB)", "JointState (16 joints)"]
-    backends = ["Cyclone", "cydr", "betterproto", "protobuf(C)", "LCM"]
-    colors = ['#4C72B0', '#55A868', '#DD8452', '#C44E52', '#8172B3']
+    backends = ["Cyclone", "cydr", "betterproto", "protobuf(C)", "LCM", "msgpack"]
+    colors = ['#4C72B0', '#55A868', '#DD8452', '#C44E52', '#8172B3', '#937860']
 
     for op, op_key in [("Serialize", "ser"), ("Deserialize", "deser")]:
         fig, axes = plt.subplots(1, 3, figsize=(14, 5))
